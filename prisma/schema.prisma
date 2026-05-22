@@ -1,0 +1,127 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  STAFF
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum MessageStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+}
+
+enum ReminderStatus {
+  PENDING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  role          Role      @default(STAFF)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model Patient {
+  id          String    @id @default(cuid())
+  name        String
+  phoneNumber String    @map("phone_number")
+  dateOfBirth DateTime? @map("date_of_birth")
+  gender      String?
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  appointments Appointment[]
+  messages     Message[]
+
+  @@map("patients")
+}
+
+model Appointment {
+  id              String            @id @default(cuid())
+  patientId       String            @map("patient_id")
+  appointmentDate DateTime          @map("appointment_date")
+  type            String?
+  notes           String?
+  status          AppointmentStatus @default(SCHEDULED)
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  patient   Patient    @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  reminders Reminder[]
+  messages  Message[]
+
+  @@map("appointments")
+}
+
+model Reminder {
+  id            String         @id @default(cuid())
+  appointmentId String         @map("appointment_id")
+  scheduledFor  DateTime       @map("scheduled_for")
+  sentAt        DateTime?      @map("sent_at")
+  status        ReminderStatus @default(PENDING)
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@map("reminders")
+}
+
+model Message {
+  id            String        @id @default(cuid())
+  patientId     String        @map("patient_id")
+  appointmentId String?       @map("appointment_id")
+  content       String
+  sentAt        DateTime?     @map("sent_at")
+  status        MessageStatus @default(PENDING)
+  providerRef   String?       @map("provider_ref")
+  createdAt     DateTime      @default(now()) @map("created_at")
+
+  patient     Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  @@map("messages")
+}
+
+model MessageTemplate {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("message_templates")
+}
+
+model SystemSettings {
+  id                    String @id @default("default")
+  reminderHoursBefore   Int    @default(24) @map("reminder_hours_before")
+  reminderEnabled       Boolean @default(true) @map("reminder_enabled")
+  facilityName          String  @default("Health Facility") @map("facility_name")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}
