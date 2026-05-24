@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  role      String   @default("RECEPTIONIST")
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Patient {
+  id           Int           @id @default(autoincrement())
+  fullName     String
+  gender       String
+  phoneNumber  String
+  address      String
+  dateOfBirth  DateTime
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  appointments Appointment[]
+  smsLogs      SMSLog[]
+}
+
+model Appointment {
+  id              Int      @id @default(autoincrement())
+  patientId       Int
+  doctorName      String
+  appointmentDate DateTime
+  notes           String?
+  status          String   @default("SCHEDULED")
+  reminderSent    Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+}
+
+model SMSLog {
+  id             Int      @id @default(autoincrement())
+  patientId      Int
+  phoneNumber    String
+  message        String
+  messageType    String   @default("APPOINTMENT")
+  deliveryStatus String   @default("PENDING")
+  sentAt         DateTime @default(now())
+  patient        Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+}
