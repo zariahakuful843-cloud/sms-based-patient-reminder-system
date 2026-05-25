@@ -23,7 +23,7 @@
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
     "typescript": "^5"
-    "@prisma/client": "^5.22.0"
+    "@prisma/client": "^5.22.0",
   },
   "engines": {
     "node": ">=22"
