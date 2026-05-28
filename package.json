@@ -8,13 +8,14 @@
     "start": "next start",
     "lint": "next lint"
   },
-  "dependencies": {
-    "next": "14.2.5",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "bcryptjs": "^2.4.3",
-    "jose": "^5.9.6"
-  },
+ "dependencies": {
+  "next": "14.2.5",
+  "react": "18.2.0",
+  "react-dom": "18.2.0",
+  "bcryptjs": "^2.4.3",
+  "jose": "^5.9.6",
+  "clsx": "^2.1.1"
+},
   "devDependencies": {
     "@prisma/client": "^5.22.0",
     "@tailwindcss/postcss": "^4",
