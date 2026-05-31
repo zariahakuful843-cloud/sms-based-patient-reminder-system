@@ -7,13 +7,13 @@ function redirectToLogin(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const res = redirectToLogin(req);
-  res.cookies.delete("auth_token", { path: "/" });
+  res.cookies.delete({ name: "auth_token", path: "/" });
   return res;
 }
 
 export async function GET(req: NextRequest) {
   const res = redirectToLogin(req);
-  res.cookies.delete("auth_token", { path: "/" });
+  res.cookies.delete({ name: "auth_token", path: "/" });
   return res;
 }
 
