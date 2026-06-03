@@ -24,3 +24,10 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Dashboard palette helpers */
+:root {
+  --hospital-bg: #F8FAFC;
+  --hospital-blue: #2563EB; /* healthcare blue */
+}
+
