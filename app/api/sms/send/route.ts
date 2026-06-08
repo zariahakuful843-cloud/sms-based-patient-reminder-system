@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import { sendSMS } from "@/lib/sms";
 
+
+
 export async function POST(req: NextRequest) {
   try {
     await requireAuth(["ADMIN", "RECEPTIONIST"]);
@@ -12,10 +14,10 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { patientId, message, messageType, phoneNumber } = body as {
+    const { patientId, message, reminderType, phoneNumber } = body as {
       patientId: number;
       message: string;
-      messageType?: string;
+      reminderType?: string;
       phoneNumber?: string;
     };
 
@@ -32,10 +34,11 @@ export async function POST(req: NextRequest) {
     const log = await prisma.sMSLog.create({
       data: {
         patientId,
+        patientName: patient.fullName,
         phoneNumber: to,
+        reminderType: reminderType ?? "APPOINTMENT_REMINDER",
         message,
-        messageType: messageType ?? "APPOINTMENT",
-        deliveryStatus: result.status === "FAILED" ? "FAILED" : "SENT",
+        status: result.status === "FAILED" ? "FAILED" : "SENT",
       },
     });
 
@@ -44,3 +47,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Server error." }, { status: 500 });
   }
 }
+

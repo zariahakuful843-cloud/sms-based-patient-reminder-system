@@ -7,6 +7,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+
+
 model User {
   id        Int      @id @default(autoincrement())
   username  String   @unique
@@ -27,8 +29,9 @@ model Patient {
   dateOfBirth  DateTime
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
-  appointments Appointment[]
-  smsLogs      SMSLog[]
+  appointments          Appointment[]
+  smsLogs               SMSLog[]
+  scheduledReminders   ScheduledReminder[]
 }
 
 model Appointment {
@@ -47,10 +50,27 @@ model Appointment {
 model SMSLog {
   id             Int      @id @default(autoincrement())
   patientId      Int
+  patientName    String
   phoneNumber    String
+  reminderType   String
   message        String
-  messageType    String   @default("APPOINTMENT")
-  deliveryStatus String   @default("PENDING")
+  status         String   @default("PENDING")
   sentAt         DateTime @default(now())
   patient        Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
 }
+
+model ScheduledReminder {
+  id            Int      @id @default(autoincrement())
+  patientId     Int
+  patientName   String
+  phoneNumber   String
+  reminderType  String
+  message       String
+  status        String   @default("PENDING")
+  scheduledAt  DateTime
+  sentAt        DateTime?
+  patient       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+}
+
+

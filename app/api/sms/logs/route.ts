@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   const skip = (page - 1) * limit;
 
   const where: Record<string, unknown> = {};
-  if (status) where.deliveryStatus = status;
+  if (status) where.status = status;
   if (search) {
     where.OR = [
       { patient: { fullName: { contains: search } } },
@@ -38,3 +38,4 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({ logs, total, page, limit });
 }
+
