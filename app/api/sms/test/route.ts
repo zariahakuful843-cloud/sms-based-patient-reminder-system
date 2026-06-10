@@ -4,14 +4,25 @@ import { sendSMS } from "@/lib/sms";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
+  console.log("[SMS ENDPOINT] endpoint called:", "POST /api/sms/test");
+
   try {
-    await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
-  } catch (err) {
-    console.error("[SMS TEST] forbidden", {
-      route: "POST /api/sms/test",
-      error: err instanceof Error ? err.message : err,
+    const session = await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
+    console.log("[SMS TEST] current user:", {
+      userId: session.userId,
+      username: session.username,
+      role: session.role,
+      name: session.name,
     });
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    console.log("[SMS TEST] detected role:", session.role);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const status = msg === "Unauthorized" ? 401 : 403;
+    console.error("[SMS TEST] auth failed", {
+      route: "POST /api/sms/test",
+      error: msg,
+    });
+    return NextResponse.json({ error: status === 401 ? "Unauthorized" : "Forbidden" }, { status });
   }
 
 

@@ -4,15 +4,28 @@ import { requireAuth } from "@/lib/auth";
 import type { ReminderType } from "@/lib/sms";
 
 export async function GET(req: NextRequest) {
+  console.log("[SMS ENDPOINT] endpoint called:", "GET /api/sms/scheduled");
   try {
-    await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
-  } catch (err) {
-    console.error("[SMS SCHEDULED LIST] forbidden", {
-      route: "GET /api/sms/scheduled",
-      error: err instanceof Error ? err.message : err,
+    const session = await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
+    console.log("[SMS SCHEDULED LIST] current user:", {
+      userId: session.userId,
+      username: session.username,
+      role: session.role,
+      name: session.name,
     });
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    console.log("[SMS SCHEDULED LIST] detected role:", session.role);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const status = msg === "Unauthorized" ? 401 : 403;
+    console.error("[SMS SCHEDULED LIST] auth failed", {
+      route: "GET /api/sms/scheduled",
+      error: msg,
+    });
+    return NextResponse.json({ error: status === 401 ? "Unauthorized" : "Forbidden" }, { status });
   }
+
+
+
 
 
   const { searchParams } = new URL(req.url);
@@ -46,15 +59,28 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  console.log("[SMS ENDPOINT] endpoint called:", "POST /api/sms/scheduled");
   try {
-    await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
-  } catch (err) {
-    console.error("[SMS SCHEDULED CREATE] forbidden", {
-      route: "POST /api/sms/scheduled",
-      error: err instanceof Error ? err.message : err,
+    const session = await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
+    console.log("[SMS SCHEDULED CREATE] current user:", {
+      userId: session.userId,
+      username: session.username,
+      role: session.role,
+      name: session.name,
     });
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    console.log("[SMS SCHEDULED CREATE] detected role:", session.role);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const status = msg === "Unauthorized" ? 401 : 403;
+    console.error("[SMS SCHEDULED CREATE] auth failed", {
+      route: "POST /api/sms/scheduled",
+      error: msg,
+    });
+    return NextResponse.json({ error: status === 401 ? "Unauthorized" : "Forbidden" }, { status });
   }
+
+
+
 
 
   try {

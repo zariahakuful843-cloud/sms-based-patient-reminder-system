@@ -38,21 +38,31 @@ export async function getSession(): Promise<JWTPayload | null> {
 
 export async function requireAuth(allowedRoles?: string[]): Promise<JWTPayload> {
   const session = await getSession();
-  const role = session?.role ?? "ANONYMOUS";
+  const detectedRole = session?.role ?? "ANONYMOUS";
+
+  // Ensure role matching is robust (case/whitespace)
+  const normalizeRole = (r: string) => (r ?? "").trim().toUpperCase();
+  const normalizedDetectedRole = normalizeRole(detectedRole);
+  const normalizedAllowedRoles = allowedRoles?.map(normalizeRole) ?? undefined;
 
   if (!session) {
-    console.warn("[AUTH] Denied: not authenticated", { role });
+    console.warn("[AUTH] Denied: not authenticated", { detectedRole: normalizedDetectedRole });
     throw new Error("Unauthorized");
   }
 
-  if (allowedRoles && !allowedRoles.includes(session.role)) {
+  if (normalizedAllowedRoles && !normalizedAllowedRoles.includes(normalizedDetectedRole)) {
     console.warn("[AUTH] Denied: forbidden role", {
-      role: session.role,
-      allowedRoles,
+      detectedRole: normalizedDetectedRole,
+      allowedRoles: normalizedAllowedRoles,
     });
     throw new Error("Forbidden");
   }
 
-  return session;
+  // Return session but with normalized role so downstream checks/logs are consistent.
+  return {
+    ...session,
+    role: normalizedDetectedRole,
+  };
 }
+
 

@@ -17,14 +17,28 @@ type Body = {
 };
 
 export async function POST(req: NextRequest) {
+  console.log("[SMS ENDPOINT] current user/session:", "(set below)");
+  console.log("[SMS ENDPOINT] detected role:", "(set below)");
+  console.log("[SMS ENDPOINT] endpoint called:", "POST /api/sms/send-single");
+
   try {
-    await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
-  } catch (err) {
-    console.error("[SMS SEND SINGLE] forbidden", {
-      route: "POST /api/sms/send-single",
-      error: err instanceof Error ? err.message : err,
+    const session = await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
+    console.log("[SMS SEND SINGLE] current user:", {
+      userId: session.userId,
+      username: session.username,
+      role: session.role,
+      name: session.name,
     });
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    console.log("[SMS SEND SINGLE] detected role:", session.role);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const status = msg === "Unauthorized" ? 401 : 403;
+    console.error("[SMS SEND SINGLE] auth failed", {
+      route: "POST /api/sms/send-single",
+      detected: "unknown",
+      error: msg,
+    });
+    return NextResponse.json({ error: status === 401 ? "Unauthorized" : "Forbidden" }, { status });
   }
 
 

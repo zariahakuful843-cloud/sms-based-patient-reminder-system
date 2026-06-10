@@ -3,24 +3,44 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  console.log("[SMS ENDPOINT] endpoint called:", "GET /api/sms/scheduled/[id]");
   try {
-    await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
-  } catch {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const session = await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
+    console.log("[SMS SCHEDULED ITEM] current user:", {
+      userId: session.userId,
+      username: session.username,
+      role: session.role,
+      name: session.name,
+    });
+    console.log("[SMS SCHEDULED ITEM] detected role:", session.role);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const status = msg === "Unauthorized" ? 401 : 403;
+    return NextResponse.json({ error: status === 401 ? "Unauthorized" : "Forbidden" }, { status });
   }
 
-
   const { id } = await params;
+
   const item = await prisma.scheduledReminder.findUnique({ where: { id: parseInt(id) } });
   if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(item);
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  console.log("[SMS ENDPOINT] endpoint called:", "PUT /api/sms/scheduled/[id]");
   try {
-    await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
-  } catch {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const session = await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
+    console.log("[SMS SCHEDULED ITEM] current user:", {
+      userId: session.userId,
+      username: session.username,
+      role: session.role,
+      name: session.name,
+    });
+    console.log("[SMS SCHEDULED ITEM] detected role:", session.role);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const status = msg === "Unauthorized" ? 401 : 403;
+    return NextResponse.json({ error: status === 401 ? "Unauthorized" : "Forbidden" }, { status });
   }
 
   try {
@@ -64,14 +84,25 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+
+  console.log("[SMS ENDPOINT] endpoint called:", "DELETE /api/sms/scheduled/[id]");
   try {
-    await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
-  } catch {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const session = await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
+    console.log("[SMS SCHEDULED ITEM] current user:", {
+      userId: session.userId,
+      username: session.username,
+      role: session.role,
+      name: session.name,
+    });
+    console.log("[SMS SCHEDULED ITEM] detected role:", session.role);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const status = msg === "Unauthorized" ? 401 : 403;
+    return NextResponse.json({ error: status === 401 ? "Unauthorized" : "Forbidden" }, { status });
   }
 
-
   const { id } = await params;
+
   try {
     await prisma.scheduledReminder.delete({ where: { id: parseInt(id) } });
     return NextResponse.json({ success: true }, { status: 200 });
@@ -79,4 +110,5 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
 }
+
 

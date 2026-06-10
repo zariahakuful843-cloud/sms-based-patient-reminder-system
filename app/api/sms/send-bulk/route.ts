@@ -21,14 +21,25 @@ type Body = {
 };
 
 export async function POST(req: NextRequest) {
+  console.log("[SMS ENDPOINT] endpoint called:", "POST /api/sms/send-bulk");
+
   try {
-    await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
-  } catch (err) {
-    console.error("[SMS SEND BULK] forbidden", {
-      route: "POST /api/sms/send-bulk",
-      error: err instanceof Error ? err.message : err,
+    const session = await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
+    console.log("[SMS SEND BULK] current user:", {
+      userId: session.userId,
+      username: session.username,
+      role: session.role,
+      name: session.name,
     });
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    console.log("[SMS SEND BULK] detected role:", session.role);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const status = msg === "Unauthorized" ? 401 : 403;
+    console.error("[SMS SEND BULK] auth failed", {
+      route: "POST /api/sms/send-bulk",
+      error: msg,
+    });
+    return NextResponse.json({ error: status === 401 ? "Unauthorized" : "Forbidden" }, { status });
   }
 
 
