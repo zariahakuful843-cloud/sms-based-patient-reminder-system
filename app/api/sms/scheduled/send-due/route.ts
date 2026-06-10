@@ -5,12 +5,17 @@ import { sendSMS } from "@/lib/sms";
 
 export async function POST(_req: NextRequest) {
   try {
-    await requireAuth(["ADMIN", "RECEPTIONIST"]);
-  } catch {
+    await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
+  } catch (err) {
+    console.error("[SMS SEND DUE] forbidden", {
+      route: "POST /api/sms/scheduled/send-due",
+      error: err instanceof Error ? err.message : err,
+    });
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {
+
     const due = await prisma.scheduledReminder.findMany({
       where: {
         status: "PENDING",

@@ -5,10 +5,15 @@ import type { ReminderType } from "@/lib/sms";
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAuth(["ADMIN", "RECEPTIONIST"]);
-  } catch {
+    await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
+  } catch (err) {
+    console.error("[SMS SCHEDULED LIST] forbidden", {
+      route: "GET /api/sms/scheduled",
+      error: err instanceof Error ? err.message : err,
+    });
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
 
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status") ?? "";
@@ -42,10 +47,15 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAuth(["ADMIN", "RECEPTIONIST"]);
-  } catch {
+    await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
+  } catch (err) {
+    console.error("[SMS SCHEDULED CREATE] forbidden", {
+      route: "POST /api/sms/scheduled",
+      error: err instanceof Error ? err.message : err,
+    });
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
 
   try {
     const body = await req.json();

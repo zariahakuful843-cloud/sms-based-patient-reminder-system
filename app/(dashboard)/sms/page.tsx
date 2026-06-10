@@ -67,36 +67,40 @@ function toTimeValue(d: Date) {
   return `${hh}:${mm}`;
 }
 
+function formatDate(d: Date) {
+  return d.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function formatTime(d: Date) {
+  return d.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
 function buildPreview(params: {
   reminderType: ReminderTypeKey;
   patientName: string;
   appointmentDate?: Date;
+  appointmentTime?: string;
   vaccinationDate?: Date;
   antenatalDate?: Date;
   followUpDate?: Date;
   laboratoryTestDate?: Date;
   medicationName?: string;
-}) {
+}): string {
   const patientName = params.patientName;
-  const formatDate = (d: Date) =>
-    d.toLocaleDateString("en-GB", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  const formatTime = (d: Date) =>
-    d.toLocaleTimeString("en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
 
   switch (params.reminderType) {
     case "APPOINTMENT_REMINDER": {
-      const dt = params.appointmentDate ?? new Date();
-      return `Dear ${patientName}, this is a reminder that you have an appointment on ${formatDate(
-        dt
-      )} at ${formatTime(dt)}. Please arrive 15 minutes early.`;
+      const d = params.appointmentDate ?? new Date();
+      const time = params.appointmentTime ? params.appointmentTime : formatTime(d);
+      return `Dear ${patientName}, this is a reminder that you have an appointment on ${formatDate(d)} at ${time}. Please arrive 15 minutes early.`;
     }
     case "MEDICATION_REMINDER": {
       const med = params.medicationName?.trim() || "your medication";
@@ -108,21 +112,15 @@ function buildPreview(params: {
     }
     case "ANTENATAL_REMINDER": {
       const d = params.antenatalDate ?? new Date();
-      return `Dear ${patientName}, this is a reminder for your antenatal visit on ${formatDate(
-        d
-      )}. We look forward to seeing you.`;
+      return `Dear ${patientName}, this is a reminder for your antenatal visit on ${formatDate(d)}. We look forward to seeing you.`;
     }
     case "FOLLOW_UP_REMINDER": {
       const d = params.followUpDate ?? new Date();
-      return `Dear ${patientName}, this is a reminder for your follow-up visit on ${formatDate(
-        d
-      )}. Please contact the facility if you need to reschedule.`;
+      return `Dear ${patientName}, this is a reminder for your follow-up visit on ${formatDate(d)}. Please contact the facility if you need to reschedule.`;
     }
     case "LABORATORY_TEST_REMINDER": {
       const d = params.laboratoryTestDate ?? new Date();
-      return `Dear ${patientName}, your laboratory test is scheduled for ${formatDate(
-        d
-      )}. Please arrive on time and follow any preparation instructions.`;
+      return `Dear ${patientName}, your laboratory test is scheduled for ${formatDate(d)}. Please arrive on time and follow any preparation instructions.`;
     }
     default:
       return `Dear ${patientName}, this is a reminder.`;
@@ -165,13 +163,11 @@ function Tabs({
 }
 
 export default function SMSPage() {
-  const [tab, setTab] = useState<
-    "single" | "bulk" | "history" | "scheduled" | "failed"
-  >("single");
+  const [tab, setTab] = useState<"single" | "bulk" | "history" | "scheduled" | "failed">("single");
 
   const [patients, setPatients] = useState<Patient[]>([]);
 
-  // Shared log state
+  // SMS History / Failed messages
   const [logs, setLogs] = useState<SMSLog[]>([]);
   const [total, setTotal] = useState(0);
   const [loadingLogs, setLoadingLogs] = useState(false);
@@ -179,46 +175,6 @@ export default function SMSPage() {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [page, setPage] = useState(1);
   const limit = 15;
-
-  // Feedback
-  const [success, setSuccess] = useState<string>("");
-  const [error, setError] = useState<string>("");
-  const [busy, setBusy] = useState(false);
-
-  // Test SMS
-  const [testPhone, setTestPhone] = useState("");
-
-  // Send Single SMS form (required fields)
-  const [singleForm, setSingleForm] = useState({
-    patientId: "",
-    reminderType: "APPOINTMENT_REMINDER" as ReminderTypeKey,
-    phoneNumber: "",
-    patientName: "",
-    messagePreview: "",
-    // optional fields by type
-    appointmentDate: toISODate(new Date()),
-    appointmentTime: toTimeValue(new Date()),
-    medicationName: "",
-    vaccinationDate: toISODate(new Date()),
-    antenatalDate: toISODate(new Date()),
-    followUpDate: toISODate(new Date()),
-    laboratoryTestDate: toISODate(new Date()),
-  });
-
-  // Send Bulk SMS
-  const [bulk, setBulk] = useState({
-    reminderType: "APPOINTMENT_REMINDER" as ReminderTypeKey,
-    recipientsText:
-      "John Doe,+233XXXXXXXXX\nJane Doe,+233YYYYYYYY\n",
-    appointmentDate: toISODate(new Date()),
-    appointmentTime: toTimeValue(new Date()),
-    medicationName: "",
-    vaccinationDate: toISODate(new Date()),
-    antenatalDate: toISODate(new Date()),
-    followUpDate: toISODate(new Date()),
-    laboratoryTestDate: toISODate(new Date()),
-    sendAsKnownPatients: true,
-  });
 
   // Scheduled reminders
   const [scheduled, setScheduled] = useState<ScheduledReminder[]>([]);
@@ -229,13 +185,34 @@ export default function SMSPage() {
   const [scheduledPage, setScheduledPage] = useState(1);
   const scheduledLimit = 10;
 
-  const [scheduleForm, setScheduleForm] = useState({
+  // Feedback + busy
+  const [success, setSuccess] = useState<string>("");
+  const [error, setError] = useState<string>("");
+  const [busy, setBusy] = useState(false);
+
+  // Test SMS
+  const [testPhone, setTestPhone] = useState("");
+
+  // Send Single SMS form (required fields)
+  const [singleForm, setSingleForm] = useState({
     patientId: "",
-    reminderType: "APPOINTMENT_REMINDER" as ReminderTypeKey,
-    scheduledAt: new Date().toISOString().slice(0, 16), // datetime-local compatible
+    patientName: "",
     phoneNumber: "",
-    message: "",
-    // for preview
+    reminderType: "APPOINTMENT_REMINDER" as ReminderTypeKey,
+    appointmentDate: toISODate(new Date()),
+    appointmentTime: toTimeValue(new Date()),
+    medicationName: "",
+    vaccinationDate: toISODate(new Date()),
+    antenatalDate: toISODate(new Date()),
+    followUpDate: toISODate(new Date()),
+    laboratoryTestDate: toISODate(new Date()),
+    messagePreview: "",
+  });
+
+  // Send Bulk SMS form
+  const [bulk, setBulk] = useState({
+    reminderType: "APPOINTMENT_REMINDER" as ReminderTypeKey,
+    recipientsText: "John Doe,+233XXXXXXXXX\nJane Doe,+233YYYYYYYY\n",
     appointmentDate: toISODate(new Date()),
     appointmentTime: toTimeValue(new Date()),
     medicationName: "",
@@ -245,22 +222,45 @@ export default function SMSPage() {
     laboratoryTestDate: toISODate(new Date()),
   });
 
+  // Scheduled create form
+  const [scheduleForm, setScheduleForm] = useState({
+    patientId: "",
+    reminderType: "APPOINTMENT_REMINDER" as ReminderTypeKey,
+    scheduledAt: new Date().toISOString().slice(0, 16),
+    appointmentDate: toISODate(new Date()),
+    appointmentTime: toTimeValue(new Date()),
+    medicationName: "",
+    vaccinationDate: toISODate(new Date()),
+    antenatalDate: toISODate(new Date()),
+    followUpDate: toISODate(new Date()),
+    laboratoryTestDate: toISODate(new Date()),
+  });
+
+  useEffect(() => {
+    setSuccess("");
+    setError("");
+  }, [tab]);
+
+  useEffect(() => {
+    (async () => {
+      const r = await fetch(`/api/patients?limit=200`);
+      const d = await r.json();
+      setPatients(d.patients ?? []);
+    })();
+  }, []);
+
   const computedSinglePreview = useMemo(() => {
-    const name = singleForm.patientName || "";
     const dt = new Date(`${singleForm.appointmentDate}T${singleForm.appointmentTime}`);
     return buildPreview({
       reminderType: singleForm.reminderType,
-      patientName: name,
-      appointmentDate: singleForm.reminderType === "APPOINTMENT_REMINDER" ? dt : undefined,
+      patientName: singleForm.patientName,
+      appointmentDate: dt,
+      appointmentTime: singleForm.appointmentTime,
       medicationName: singleForm.medicationName,
-      vaccinationDate:
-        singleForm.reminderType === "VACCINATION_REMINDER" ? new Date(singleForm.vaccinationDate) : undefined,
-      antenatalDate:
-        singleForm.reminderType === "ANTENATAL_REMINDER" ? new Date(singleForm.antenatalDate) : undefined,
-      followUpDate:
-        singleForm.reminderType === "FOLLOW_UP_REMINDER" ? new Date(singleForm.followUpDate) : undefined,
-      laboratoryTestDate:
-        singleForm.reminderType === "LABORATORY_TEST_REMINDER" ? new Date(singleForm.laboratoryTestDate) : undefined,
+      vaccinationDate: new Date(singleForm.vaccinationDate),
+      antenatalDate: new Date(singleForm.antenatalDate),
+      followUpDate: new Date(singleForm.followUpDate),
+      laboratoryTestDate: new Date(singleForm.laboratoryTestDate),
     });
   }, [singleForm]);
 
@@ -268,122 +268,91 @@ export default function SMSPage() {
     setSingleForm((f) => ({ ...f, messagePreview: computedSinglePreview }));
   }, [computedSinglePreview]);
 
-  useEffect(() => {
-    setScheduleForm((f) => ({ ...f, message: "" }));
-    // message computed on create from selected patient/type; keep simple here
-  }, []);
-
-  async function fetchPatients() {
-    const r = await fetch(`/api/patients?limit=200`);
-    const d = await r.json();
-    setPatients(d.patients ?? []);
-  }
-
-  async function fetchLogsPage(newPage: number) {
-    setLoadingLogs(true);
-    try {
-      const params = new URLSearchParams({
-        search: searchLogs,
-        status: statusFilter,
-        page: String(newPage),
-        limit: String(limit),
-      });
-      const res = await fetch(`/api/sms/logs?${params}`);
-      const data = await res.json();
-      setLogs(data.logs ?? []);
-      setTotal(data.total ?? 0);
-    } finally {
-      setLoadingLogs(false);
-    }
-  }
-
-  async function fetchScheduled() {
-    setLoadingScheduled(true);
-    try {
-      const params = new URLSearchParams({
-        search: scheduledSearch,
-        status: scheduledStatus,
-        page: String(scheduledPage),
-        limit: String(scheduledLimit),
-      });
-      const res = await fetch(`/api/sms/scheduled?${params}`);
-      const data = await res.json();
-      setScheduled(data.items ?? []);
-      setScheduledTotal(data.total ?? 0);
-    } finally {
-      setLoadingScheduled(false);
-    }
+  function schedulePreview(patientName: string) {
+    const dt = new Date(`${scheduleForm.appointmentDate}T${scheduleForm.appointmentTime}`);
+    return buildPreview({
+      reminderType: scheduleForm.reminderType,
+      patientName,
+      appointmentDate: dt,
+      appointmentTime: scheduleForm.appointmentTime,
+      medicationName: scheduleForm.medicationName,
+      vaccinationDate: new Date(scheduleForm.vaccinationDate),
+      antenatalDate: new Date(scheduleForm.antenatalDate),
+      followUpDate: new Date(scheduleForm.followUpDate),
+      laboratoryTestDate: new Date(scheduleForm.laboratoryTestDate),
+    });
   }
 
   useEffect(() => {
-    fetchPatients();
-  }, []);
-
-  useEffect(() => {
-    if (tab === "history" || tab === "failed") {
-      const st = tab === "failed" ? "FAILED" : "";
-      setStatusFilter(st);
+    if (tab === "failed") {
+      setStatusFilter("FAILED");
+      setPage(1);
+    } else if (tab === "history") {
+      setStatusFilter("");
       setPage(1);
     }
   }, [tab]);
 
   useEffect(() => {
-    if (tab === "history" || tab === "failed") {
-      fetchLogsPage(page);
-    }
-  }, [tab, page, statusFilter]);
+    if (tab !== "history" && tab !== "failed") return;
+
+    const run = async () => {
+      setLoadingLogs(true);
+      try {
+        const params = new URLSearchParams({
+          search: searchLogs,
+          status: statusFilter,
+          page: String(page),
+          limit: String(limit),
+        });
+        const res = await fetch(`/api/sms/logs?${params}`);
+        const data = await res.json();
+        setLogs(data.logs ?? []);
+        setTotal(data.total ?? 0);
+      } finally {
+        setLoadingLogs(false);
+      }
+    };
+
+    run();
+  }, [tab, searchLogs, statusFilter, page]);
 
   useEffect(() => {
-    if (tab === "scheduled") {
-      fetchScheduled();
-    }
-  }, [tab, scheduledPage, scheduledSearch, scheduledStatus]);
+    if (tab !== "scheduled") return;
 
-  function reminderTypeForLabel(value: ReminderTypeKey) {
-    return REMINDER_TYPES.find((x) => x.value === value)?.label ?? value;
+    const run = async () => {
+      setLoadingScheduled(true);
+      try {
+        const params = new URLSearchParams({
+          search: scheduledSearch,
+          status: scheduledStatus,
+          page: String(scheduledPage),
+          limit: String(scheduledLimit),
+        });
+        const res = await fetch(`/api/sms/scheduled?${params}`);
+        const data = await res.json();
+        setScheduled(data.items ?? []);
+        setScheduledTotal(data.total ?? 0);
+      } finally {
+        setLoadingScheduled(false);
+      }
+    };
+
+    run();
+  }, [tab, scheduledSearch, scheduledStatus, scheduledPage]);
+
+  function reminderTypeLabel(type: ReminderTypeKey) {
+    return REMINDER_TYPES.find((x) => x.value === type)?.label ?? type;
   }
 
-  function handleSinglePatientChange(patientId: string) {
+  function handleSinglePatientSelect(patientId: string) {
     const p = patients.find((pt) => String(pt.id) === patientId);
-    const patientName = p ? safeFirstName(p.fullName) : "";
     setSingleForm((f) => ({
       ...f,
       patientId,
-      patientName,
+      patientName: p ? safeFirstName(p.fullName) : "",
       phoneNumber: p?.phoneNumber ?? "",
     }));
-  }
-
-  function handleSchedulePatientChange(patientId: string) {
-    const p = patients.find((pt) => String(pt.id) === patientId);
-    setScheduleForm((f) => ({
-      ...f,
-      patientId,
-      phoneNumber: p?.phoneNumber ?? "",
-    }));
-  }
-
-  function computeSchedulePreview(): string {
-    const patient = patients.find((pt) => String(pt.id) === scheduleForm.patientId);
-    const patientName = patient ? safeFirstName(patient.fullName) : "";
-
-    const dt = new Date(`${scheduleForm.appointmentDate}T${scheduleForm.appointmentTime}`);
-
-    return buildPreview({
-      reminderType: scheduleForm.reminderType,
-      patientName,
-      appointmentDate:
-        scheduleForm.reminderType === "APPOINTMENT_REMINDER" ? dt : undefined,
-      medicationName: scheduleForm.medicationName,
-      vaccinationDate:
-        scheduleForm.reminderType === "VACCINATION_REMINDER" ? new Date(scheduleForm.vaccinationDate) : undefined,
-      antenatalDate:
-        scheduleForm.reminderType === "ANTENATAL_REMINDER" ? new Date(scheduleForm.antenatalDate) : undefined,
-      followUpDate:
-        scheduleForm.reminderType === "FOLLOW_UP_REMINDER" ? new Date(scheduleForm.followUpDate) : undefined,
-      laboratoryTestDate:
-        scheduleForm.reminderType === "LABORATORY_TEST_REMINDER" ? new Date(scheduleForm.laboratoryTestDate) : undefined,
-    });
   }
 
   async function onSendTestSMS() {
@@ -411,7 +380,7 @@ export default function SMSPage() {
   }
 
   async function onSendSingle() {
-    if (!singleForm.patientId || !singleForm.patientName || !singleForm.phoneNumber) {
+    if (!singleForm.patientName.trim() || !singleForm.phoneNumber.trim()) {
       setError("Patient Name and Phone Number are required.");
       return;
     }
@@ -421,34 +390,44 @@ export default function SMSPage() {
     setSuccess("");
 
     try {
+      const appointmentDateIso =
+        singleForm.reminderType === "APPOINTMENT_REMINDER"
+          ? new Date(`${singleForm.appointmentDate}T${singleForm.appointmentTime}`).toISOString()
+          : undefined;
+
+      const vaccinationDateIso =
+        singleForm.reminderType === "VACCINATION_REMINDER"
+          ? new Date(singleForm.vaccinationDate).toISOString()
+          : undefined;
+
+      const antenatalDateIso =
+        singleForm.reminderType === "ANTENATAL_REMINDER"
+          ? new Date(singleForm.antenatalDate).toISOString()
+          : undefined;
+
+      const followUpDateIso =
+        singleForm.reminderType === "FOLLOW_UP_REMINDER"
+          ? new Date(singleForm.followUpDate).toISOString()
+          : undefined;
+
+      const labDateIso =
+        singleForm.reminderType === "LABORATORY_TEST_REMINDER"
+          ? new Date(singleForm.laboratoryTestDate).toISOString()
+          : undefined;
+
       const res = await fetch(`/api/sms/send-single`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          patientId: parseInt(singleForm.patientId),
+          patientId: singleForm.patientId ? parseInt(singleForm.patientId) : undefined,
           phoneNumber: singleForm.phoneNumber,
           patientName: singleForm.patientName,
           reminderType: singleForm.reminderType,
-          appointmentDate:
-            singleForm.reminderType === "APPOINTMENT_REMINDER"
-              ? `${singleForm.appointmentDate}T${singleForm.appointmentTime}`
-              : undefined,
-          vaccinationDate:
-            singleForm.reminderType === "VACCINATION_REMINDER"
-              ? singleForm.vaccinationDate
-              : undefined,
-          antenatalDate:
-            singleForm.reminderType === "ANTENATAL_REMINDER"
-              ? singleForm.antenatalDate
-              : undefined,
-          followUpDate:
-            singleForm.reminderType === "FOLLOW_UP_REMINDER"
-              ? singleForm.followUpDate
-              : undefined,
-          laboratoryTestDate:
-            singleForm.reminderType === "LABORATORY_TEST_REMINDER"
-              ? singleForm.laboratoryTestDate
-              : undefined,
+          appointmentDate: appointmentDateIso,
+          vaccinationDate: vaccinationDateIso,
+          antenatalDate: antenatalDateIso,
+          followUpDate: followUpDateIso,
+          laboratoryTestDate: labDateIso,
           medicationName:
             singleForm.reminderType === "MEDICATION_REMINDER"
               ? singleForm.medicationName
@@ -461,9 +440,8 @@ export default function SMSPage() {
 
       setSuccess("SMS sent successfully!");
       setTab("history");
-      setSearchLogs("");
       setPage(1);
-      fetchLogsPage(1);
+      setSearchLogs("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to send SMS.");
     } finally {
@@ -472,12 +450,7 @@ export default function SMSPage() {
   }
 
   async function onSendBulk() {
-    // recipients format: "Patient Name,Phone"
-    const lines = bulk.recipientsText
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean);
-
+    const lines = bulk.recipientsText.split("\n").map((l) => l.trim()).filter(Boolean);
     if (lines.length === 0) {
       setError("Enter at least one recipient line.");
       return;
@@ -496,47 +469,73 @@ export default function SMSPage() {
       return;
     }
 
-    // Backend requires patientId for persistence.
-    // We'll resolve patientId when possible; otherwise backend will fail persistence.
-    const recipientPayload = recipients.map((r) => {
-      const known = patients.find((p) => p.phoneNumber.replace(/\s/g, "") === r.phoneNumber.replace(/\s/g, ""));
-      return {
-        phoneNumber: r.phoneNumber,
-        patientName: r.patientName,
-        patientId: known?.id,
-      };
-    });
-
     setBusy(true);
     setError("");
     setSuccess("");
+
     try {
+      const recipientPayload = recipients.map((r) => {
+        const known = patients.find(
+          (p) => p.phoneNumber.replace(/\s/g, "") === r.phoneNumber.replace(/\s/g, "")
+        );
+        return {
+          phoneNumber: r.phoneNumber,
+          patientName: r.patientName,
+          patientId: known?.id,
+        };
+      });
+
+      const appointmentDateIso =
+        bulk.reminderType === "APPOINTMENT_REMINDER"
+          ? new Date(`${bulk.appointmentDate}T${bulk.appointmentTime}`).toISOString()
+          : undefined;
+
+      const vaccinationDateIso =
+        bulk.reminderType === "VACCINATION_REMINDER" ? new Date(bulk.vaccinationDate).toISOString() : undefined;
+
+      const antenatalDateIso =
+        bulk.reminderType === "ANTENATAL_REMINDER" ? new Date(bulk.antenatalDate).toISOString() : undefined;
+
+      const followUpDateIso =
+        bulk.reminderType === "FOLLOW_UP_REMINDER" ? new Date(bulk.followUpDate).toISOString() : undefined;
+
+      const labDateIso =
+        bulk.reminderType === "LABORATORY_TEST_REMINDER"
+          ? new Date(bulk.laboratoryTestDate).toISOString()
+          : undefined;
+
       const res = await fetch(`/api/sms/send-bulk`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           reminderType: bulk.reminderType,
           recipients: recipientPayload,
-          medicationName: bulk.reminderType === "MEDICATION_REMINDER" ? bulk.medicationName : undefined,
-          appointmentDate: bulk.reminderType === "APPOINTMENT_REMINDER" ? `${bulk.appointmentDate}T${bulk.appointmentTime}` : undefined,
-          vaccinationDate: bulk.reminderType === "VACCINATION_REMINDER" ? bulk.vaccinationDate : undefined,
-          antenatalDate: bulk.reminderType === "ANTENATAL_REMINDER" ? bulk.antenatalDate : undefined,
-          followUpDate: bulk.reminderType === "FOLLOW_UP_REMINDER" ? bulk.followUpDate : undefined,
-          laboratoryTestDate: bulk.reminderType === "LABORATORY_TEST_REMINDER" ? bulk.laboratoryTestDate : undefined,
+          medicationName:
+            bulk.reminderType === "MEDICATION_REMINDER" ? bulk.medicationName : undefined,
+          appointmentDate: appointmentDateIso,
+          vaccinationDate: vaccinationDateIso,
+          antenatalDate: antenatalDateIso,
+          followUpDate: followUpDateIso,
+          laboratoryTestDate: labDateIso,
         }),
       });
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to send bulk SMS.");
 
-      setSuccess("Bulk SMS processing completed." );
+      setSuccess("Bulk SMS processing completed.");
       setTab("history");
       setPage(1);
-      fetchLogsPage(1);
+      setSearchLogs("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to send bulk SMS.");
     } finally {
       setBusy(false);
     }
+  }
+
+  function reminderTypeForSelect(type: ReminderTypeKey) {
+    return REMINDER_TYPES.find((t) => t.value === type)?.value ?? type;
   }
 
   async function onCreateScheduled() {
@@ -562,15 +561,16 @@ export default function SMSPage() {
     setSuccess("");
 
     try {
-      const message = computeSchedulePreview();
+      const message = schedulePreview(safeFirstName(patient.fullName));
+
       const res = await fetch(`/api/sms/scheduled`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           patientId: patient.id,
-          reminderType: scheduleForm.reminderType,
           phoneNumber: patient.phoneNumber,
           patientName: safeFirstName(patient.fullName),
+          reminderType: scheduleForm.reminderType,
           message,
           scheduledAt: scheduledAt.toISOString(),
         }),
@@ -579,10 +579,9 @@ export default function SMSPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to schedule reminder.");
 
-      setSuccess("Scheduled reminder created." );
+      setSuccess("Scheduled reminder created.");
       setTab("scheduled");
       setScheduledPage(1);
-      fetchScheduled();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to schedule reminder.");
     } finally {
@@ -592,15 +591,17 @@ export default function SMSPage() {
 
   async function onDeleteScheduled(id: number) {
     if (!confirm("Delete this scheduled reminder?")) return;
+
     setBusy(true);
     setError("");
     setSuccess("");
+
     try {
       const res = await fetch(`/api/sms/scheduled/${id}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to delete.");
-      setSuccess("Scheduled reminder deleted." );
-      fetchScheduled();
+      setSuccess("Scheduled reminder deleted.");
+      setScheduledPage(1);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to delete.");
     } finally {
@@ -618,8 +619,6 @@ export default function SMSPage() {
       if (!res.ok) throw new Error(data.error ?? "Failed to send due reminders.");
       setSuccess(`Processed due reminders: ${data.processed ?? 0}`);
       setTab("history");
-      fetchLogsPage(1);
-      fetchScheduled();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to send due reminders.");
     } finally {
@@ -639,12 +638,15 @@ export default function SMSPage() {
 
       <Tabs value={tab} onChange={setTab} />
 
-      {/* Test SMS (always visible for admins) */}
       <Card>
         <CardHeader
           title="Test SMS"
-          description="Send a sample SMS to verify delivery (requires ADMIN login)."
-          action={<Button size="sm" onClick={onSendDueNow} disabled={busy}>Send Due Now</Button>}
+          description="Send a sample SMS to verify delivery (ADMIN login required)."
+          action={
+            <Button size="sm" onClick={onSendDueNow} loading={busy}>
+              Send Due Now
+            </Button>
+          }
         />
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-3 items-end">
@@ -676,7 +678,10 @@ export default function SMSPage() {
 
       {tab === "single" && (
         <Card>
-          <CardHeader title="Send Single SMS" description="Generate SMS content automatically based on reminder type." />
+          <CardHeader
+            title="Send Single SMS"
+            description="Select reminder type and we generate the SMS content automatically."
+          />
           <CardContent>
             <form
               className="grid grid-cols-1 md:grid-cols-2 gap-4"
@@ -706,24 +711,19 @@ export default function SMSPage() {
                   label="Reminder Type"
                   required
                   value={singleForm.reminderType}
-                  onChange={(e) =>
-                    setSingleForm((f) => ({
-                      ...f,
-                      reminderType: e.target.value as ReminderTypeKey,
-                    }))
-                  }
+                  onChange={(e) => setSingleForm((f) => ({ ...f, reminderType: e.target.value as ReminderTypeKey }))}
                   options={REMINDER_TYPES.map((t) => ({ value: t.value, label: t.label }))}
                 />
               </div>
 
               <div className="md:col-span-2">
-                <label className="text-sm font-medium text-slate-700">Select Patient (optional for phone autofill)</label>
+                <label className="text-sm font-medium text-slate-700">Select Patient (optional)</label>
                 <select
                   className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={singleForm.patientId}
                   onChange={(e) => {
                     const id = e.target.value;
-                    handleSinglePatientChange(id);
+                    handleSinglePatientSelect(id);
                     setSingleForm((f) => ({ ...f, patientId: id }));
                   }}
                 >
@@ -736,7 +736,6 @@ export default function SMSPage() {
                 </select>
               </div>
 
-              {/* Type-specific fields */}
               {singleForm.reminderType === "APPOINTMENT_REMINDER" && (
                 <>
                   <Input
@@ -806,30 +805,36 @@ export default function SMSPage() {
                 />
               )}
 
-              {/* Preview */}
               <div className="md:col-span-2">
-                <Textarea label="Message Preview" value={singleForm.messagePreview} readOnly rows={4} required />
-                <div className="text-xs text-slate-400 mt-1">Reminder: {reminderTypeForLabel(singleForm.reminderType)}</div>
+                <Textarea
+                  label="Message Preview"
+                  value={singleForm.messagePreview}
+                  readOnly
+                  rows={4}
+                  required
+                />
+                <div className="text-xs text-slate-400 mt-1">{reminderTypeLabel(singleForm.reminderType)}</div>
               </div>
 
               <div className="md:col-span-2 flex gap-3">
                 <Button type="submit" loading={busy}>
                   Send SMS
                 </Button>
-                <Button type="button" variant="secondary" onClick={() => setTab("history")}>View History</Button>
+                <Button type="button" variant="secondary" onClick={() => setTab("history")}>
+                  View History
+                </Button>
               </div>
             </form>
-
-            <div className="mt-4 text-xs text-slate-500">
-              Note: Backend persists logs using <span className="font-semibold">patientId</span>. If you select a patient above, phone and patientId will be linked automatically.
-            </div>
           </CardContent>
         </Card>
       )}
 
       {tab === "bulk" && (
         <Card>
-          <CardHeader title="Send Bulk SMS" description="Send SMS to many recipients. Provide one recipient per line: Patient Name,Phone." />
+          <CardHeader
+            title="Send Bulk SMS"
+            description="Provide one recipient per line: Patient Name,Phone."
+          />
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Select
@@ -865,47 +870,43 @@ export default function SMSPage() {
                   required
                   value={bulk.medicationName}
                   onChange={(e) => setBulk((b) => ({ ...b, medicationName: e.target.value }))}
-                  placeholder="e.g. Metformin 500mg"
                 />
               )}
 
-              {bulk.reminderType === "VACCINATION_REMINDER" && (
+              {(bulk.reminderType === "VACCINATION_REMINDER" ||
+                bulk.reminderType === "ANTENATAL_REMINDER" ||
+                bulk.reminderType === "FOLLOW_UP_REMINDER" ||
+                bulk.reminderType === "LABORATORY_TEST_REMINDER") && (
                 <Input
                   label="Date"
                   required
                   type="date"
-                  value={bulk.vaccinationDate}
-                  onChange={(e) => setBulk((b) => ({ ...b, vaccinationDate: e.target.value }))}
-                />
-              )}
-
-              {bulk.reminderType === "ANTENATAL_REMINDER" && (
-                <Input
-                  label="Date"
-                  required
-                  type="date"
-                  value={bulk.antenatalDate}
-                  onChange={(e) => setBulk((b) => ({ ...b, antenatalDate: e.target.value }))}
-                />
-              )}
-
-              {bulk.reminderType === "FOLLOW_UP_REMINDER" && (
-                <Input
-                  label="Date"
-                  required
-                  type="date"
-                  value={bulk.followUpDate}
-                  onChange={(e) => setBulk((b) => ({ ...b, followUpDate: e.target.value }))}
-                />
-              )}
-
-              {bulk.reminderType === "LABORATORY_TEST_REMINDER" && (
-                <Input
-                  label="Date"
-                  required
-                  type="date"
-                  value={bulk.laboratoryTestDate}
-                  onChange={(e) => setBulk((b) => ({ ...b, laboratoryTestDate: e.target.value }))}
+                  value={
+                    bulk.reminderType === "VACCINATION_REMINDER"
+                      ? bulk.vaccinationDate
+                      : bulk.reminderType === "ANTENATAL_REMINDER"
+                        ? bulk.antenatalDate
+                        : bulk.reminderType === "FOLLOW_UP_REMINDER"
+                          ? bulk.followUpDate
+                          : bulk.laboratoryTestDate
+                  }
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setBulk((b) => {
+                      switch (b.reminderType) {
+                        case "VACCINATION_REMINDER":
+                          return { ...b, vaccinationDate: v };
+                        case "ANTENATAL_REMINDER":
+                          return { ...b, antenatalDate: v };
+                        case "FOLLOW_UP_REMINDER":
+                          return { ...b, followUpDate: v };
+                        case "LABORATORY_TEST_REMINDER":
+                          return { ...b, laboratoryTestDate: v };
+                        default:
+                          return b;
+                      }
+                    });
+                  }}
                 />
               )}
 
@@ -917,16 +918,15 @@ export default function SMSPage() {
                   value={bulk.recipientsText}
                   onChange={(e) => setBulk((b) => ({ ...b, recipientsText: e.target.value }))}
                 />
-                <div className="text-xs text-slate-400 mt-1">
-                  Backend persistence needs patientId. If a phone number matches an existing Patient, it will be linked automatically.
-                </div>
               </div>
 
               <div className="md:col-span-2 flex gap-3">
-                <Button onClick={onSendBulk} loading={busy} type="button">
+                <Button loading={busy} type="button" onClick={onSendBulk}>
                   Send Bulk SMS
                 </Button>
-                <Button type="button" variant="secondary" onClick={() => setTab("failed")}>View Failed</Button>
+                <Button type="button" variant="secondary" onClick={() => setTab("failed")}>
+                  View Failed
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -937,7 +937,7 @@ export default function SMSPage() {
         <Card>
           <CardHeader
             title={tab === "failed" ? "Failed Messages" : "SMS History"}
-            description="View all SMS logs." 
+            description="View all SMS logs."
           />
           <CardContent>
             <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
@@ -974,14 +974,7 @@ export default function SMSPage() {
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-50">
                   <tr>
-                    {[
-                      "Patient",
-                      "Phone",
-                      "Type",
-                      "Message",
-                      "Status",
-                      "Date Sent",
-                    ].map((h) => (
+                    {["Patient", "Phone", "Type", "Message", "Status", "Date Sent"].map((h) => (
                       <th
                         key={h}
                         className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500"
@@ -1064,15 +1057,10 @@ export default function SMSPage() {
           <CardHeader
             title="Scheduled Reminders"
             description="Create reminders and manage scheduled sends."
-            action={
-              <Button size="sm" onClick={onSendDueNow} loading={busy}>
-                Send Due Now
-              </Button>
-            }
+            action={<Button size="sm" onClick={onSendDueNow} loading={busy}>Send Due Now</Button>}
           />
           <CardContent>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Create */}
               <div className="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-4">
                 <h3 className="text-sm font-semibold text-slate-900">Create Scheduled Reminder</h3>
 
@@ -1081,7 +1069,7 @@ export default function SMSPage() {
                     label="Patient"
                     required
                     value={scheduleForm.patientId}
-                    onChange={(e) => handleSchedulePatientChange(e.target.value)}
+                    onChange={(e) => setScheduleForm((f) => ({ ...f, patientId: e.target.value }))}
                     options={[
                       { value: "", label: "Select patient…" },
                       ...patients.map((p) => ({ value: String(p.id), label: `${p.fullName} (${p.phoneNumber})` })),
@@ -1132,32 +1120,27 @@ export default function SMSPage() {
                       label="Date"
                       required
                       type="date"
-                      value={(() => {
-                        switch (scheduleForm.reminderType) {
-                          case "VACCINATION_REMINDER":
-                            return scheduleForm.vaccinationDate;
-                          case "ANTENATAL_REMINDER":
-                            return scheduleForm.antenatalDate;
-                          case "FOLLOW_UP_REMINDER":
-                            return scheduleForm.followUpDate;
-                          case "LABORATORY_TEST_REMINDER":
-                            return scheduleForm.laboratoryTestDate;
-                          default:
-                            return toISODate(new Date());
-                        }
-                      })()}
+                      value={
+                        scheduleForm.reminderType === "VACCINATION_REMINDER"
+                          ? scheduleForm.vaccinationDate
+                          : scheduleForm.reminderType === "ANTENATAL_REMINDER"
+                            ? scheduleForm.antenatalDate
+                            : scheduleForm.reminderType === "FOLLOW_UP_REMINDER"
+                              ? scheduleForm.followUpDate
+                              : scheduleForm.laboratoryTestDate
+                      }
                       onChange={(e) => {
-                        const val = e.target.value;
+                        const v = e.target.value;
                         setScheduleForm((f) => {
                           switch (f.reminderType) {
                             case "VACCINATION_REMINDER":
-                              return { ...f, vaccinationDate: val };
+                              return { ...f, vaccinationDate: v };
                             case "ANTENATAL_REMINDER":
-                              return { ...f, antenatalDate: val };
+                              return { ...f, antenatalDate: v };
                             case "FOLLOW_UP_REMINDER":
-                              return { ...f, followUpDate: val };
+                              return { ...f, followUpDate: v };
                             case "LABORATORY_TEST_REMINDER":
-                              return { ...f, laboratoryTestDate: val };
+                              return { ...f, laboratoryTestDate: v };
                             default:
                               return f;
                           }
@@ -1176,7 +1159,10 @@ export default function SMSPage() {
 
                   <Textarea
                     label="Message Preview"
-                    value={computeSchedulePreview()}
+                    value={(() => {
+                      const patient = patients.find((p) => String(p.id) === scheduleForm.patientId);
+                      return patient ? schedulePreview(safeFirstName(patient.fullName)) : "";
+                    })()}
                     readOnly
                     rows={4}
                   />
@@ -1187,7 +1173,6 @@ export default function SMSPage() {
                 </div>
               </div>
 
-              {/* List */}
               <div>
                 <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
                   <div className="flex-1">
@@ -1223,15 +1208,7 @@ export default function SMSPage() {
                   <table className="min-w-full text-sm">
                     <thead className="bg-slate-50">
                       <tr>
-                        {[
-                          "Patient",
-                          "Phone",
-                          "Type",
-                          "Message",
-                          "Status",
-                          "Scheduled At",
-                          "Actions",
-                        ].map((h) => (
+                        {["Patient", "Phone", "Type", "Message", "Status", "Scheduled At", "Actions"].map((h) => (
                           <th
                             key={h}
                             className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500"
@@ -1272,12 +1249,7 @@ export default function SMSPage() {
                             </td>
                             <td className="px-4 py-3 text-slate-500">{formatDateTime(item.scheduledAt)}</td>
                             <td className="px-4 py-3">
-                              <Button
-                                variant="danger"
-                                size="sm"
-                                onClick={() => onDeleteScheduled(item.id)}
-                                disabled={busy}
-                              >
+                              <Button variant="danger" size="sm" onClick={() => onDeleteScheduled(item.id)} disabled={busy}>
                                 Delete
                               </Button>
                             </td>

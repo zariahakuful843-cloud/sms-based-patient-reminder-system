@@ -5,10 +5,15 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAuth(["ADMIN"]);
-  } catch {
+    await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
+  } catch (err) {
+    console.error("[SMS TEST] forbidden", {
+      route: "POST /api/sms/test",
+      error: err instanceof Error ? err.message : err,
+    });
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
 
   try {
     const body = await req.json();

@@ -4,10 +4,11 @@ import { requireAuth } from "@/lib/auth";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth(["ADMIN", "RECEPTIONIST"]);
+    await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
   } catch {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
 
   const { id } = await params;
   const item = await prisma.scheduledReminder.findUnique({ where: { id: parseInt(id) } });
@@ -17,7 +18,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth(["ADMIN", "RECEPTIONIST"]);
+    await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
   } catch {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -64,10 +65,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth(["ADMIN", "RECEPTIONIST"]);
+    await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
   } catch {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
 
   const { id } = await params;
   try {

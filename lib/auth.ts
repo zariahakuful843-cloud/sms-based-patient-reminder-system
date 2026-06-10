@@ -38,9 +38,21 @@ export async function getSession(): Promise<JWTPayload | null> {
 
 export async function requireAuth(allowedRoles?: string[]): Promise<JWTPayload> {
   const session = await getSession();
-  if (!session) throw new Error("Unauthorized");
+  const role = session?.role ?? "ANONYMOUS";
+
+  if (!session) {
+    console.warn("[AUTH] Denied: not authenticated", { role });
+    throw new Error("Unauthorized");
+  }
+
   if (allowedRoles && !allowedRoles.includes(session.role)) {
+    console.warn("[AUTH] Denied: forbidden role", {
+      role: session.role,
+      allowedRoles,
+    });
     throw new Error("Forbidden");
   }
+
   return session;
 }
+

@@ -18,10 +18,15 @@ type Body = {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAuth(["ADMIN", "RECEPTIONIST"]);
-  } catch {
+    await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
+  } catch (err) {
+    console.error("[SMS SEND SINGLE] forbidden", {
+      route: "POST /api/sms/send-single",
+      error: err instanceof Error ? err.message : err,
+    });
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
 
   try {
     const body = (await req.json()) as Body;

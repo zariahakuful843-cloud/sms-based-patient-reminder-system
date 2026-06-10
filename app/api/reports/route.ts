@@ -61,11 +61,12 @@ export async function GET(req: NextRequest) {
       where: dateFilter ? { sentAt: dateFilter } : undefined,
     }),
     prisma.sMSLog.count({
-      where: { deliveryStatus: "SENT", ...(dateFilter ? { sentAt: dateFilter } : {}) },
+      where: { status: "SENT", ...(dateFilter ? { sentAt: dateFilter } : {}) },
     }),
     prisma.sMSLog.count({
-      where: { deliveryStatus: "FAILED", ...(dateFilter ? { sentAt: dateFilter } : {}) },
+      where: { status: "FAILED", ...(dateFilter ? { sentAt: dateFilter } : {}) },
     }),
+
     prisma.patient.groupBy({ by: ["gender"], _count: { id: true } }),
     prisma.appointment.groupBy({
       by: ["status"],
