@@ -1,7 +1,7 @@
 {
   "version": 2,
   "functions": {
-    "api/sms/scheduled/send-due": {
+    "api/sms/scheduled/send-due/route.ts": {
       "maxDuration": 60
     }
   }
