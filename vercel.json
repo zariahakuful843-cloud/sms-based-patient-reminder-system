@@ -4,12 +4,7 @@
     "api/sms/scheduled/send-due": {
       "maxDuration": 60
     }
-  },
-  "crons": [
-    {
-      "path": "/api/sms/scheduled/send-due",
-      "schedule": "0 0 * * * *"
-    }
-  ]
-}
+  }
+} 
+  
 
