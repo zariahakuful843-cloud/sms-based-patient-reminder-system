@@ -8,7 +8,7 @@
   "crons": [
     {
       "path": "/api/sms/scheduled/send-due",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 0 * * * *"
     }
   ]
 }
