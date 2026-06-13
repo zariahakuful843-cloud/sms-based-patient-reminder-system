@@ -27,6 +27,14 @@
 - [ ] Add loading indicators, success/error handling.
 - [ ] Ensure responsive layout.
 
+## Reports & Analytics (UI)
+- [ ] Redesign `app/(dashboard)/reports/page.tsx` into a modern hospital-grade dashboard UI
+- [ ] KPI cards (SMS Sent/Delivered/Pending/Failed/Unique Patients) with color coding and vs-previous comparison
+- [ ] Analytics section with line + donut charts and loading skeletons/empty states
+- [ ] Recent SMS Activity table with search, pagination, status badges
+- [ ] Optional: Patient Engagement table
+- [ ] Export Report + filter controls (UI only; keep backend calls intact)
+
 ## Verification
 - [ ] `npm run dev`
 - [ ] `npx prisma migrate dev`
