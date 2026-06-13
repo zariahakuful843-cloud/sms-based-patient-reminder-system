@@ -230,10 +230,31 @@ function EmptyState({ title, description }: { title: string; description: string
     </div>
   );
 }
-
+const EMPTY_REPORT: ReportData = {
+  patients: {
+    total: 0,
+    thisMonth: 0,
+    byGender: [],
+  },
+  appointments: {
+    total: 0,
+    scheduled: 0,
+    completed: 0,
+    cancelled: 0,
+    missed: 0,
+    byStatus: [],
+    byMonth: [],
+  },
+  sms: {
+    total: 0,
+    sent: 0,
+    failed: 0,
+    byMonth: [],
+  },
+};
 export default function ReportsPage() {
-  const [data, setData] = useState<ReportData | null>(null);
-  const [previous, setPrevious] = useState<ReportData | null>(null);
+  const [data, setData] = useState<ReportData>(EMPTY_REPORT);
+  const [previous, setPrevious] = useState<ReportData>(EMPTY_REPORT);
   const [loading, setLoading] = useState(true);
 
   const [from, setFrom] = useState("");
@@ -279,8 +300,8 @@ export default function ReportsPage() {
       setData(cur);
       setPrevious(prev);
     } catch {
-      setData(null);
-      setPrevious(null);
+      setData(EMPTY_REPORT);
+      setPrevious(EMPTY_REPORT);
     } finally {
       setLoading(false);
     }
@@ -291,31 +312,40 @@ export default function ReportsPage() {
   }, []); // initial
 
   const visible = useMemo(() => {
-    if (!data) return null;
-    // Filter UI only (keeps backend intact). We still fetch the full dataset.
-    if (reportType === "ALL") return data;
-    // For simplicity, we still display all panels, but we could hide based on type.
-    return data;
-  }, [data, reportType]);
+  return data;
+}, [data]);
 
-  const kpis = useMemo(() => {
-    const cur = data;
-    const prev = previous;
-    if (!cur || !prev) return null;
+ const kpis = useMemo(() => {
+  const smsSent = computeDelta(data.sms.total, previous.sms.total);
 
-    const smsSent: KpiDelta = computeDelta(cur.sms.total, prev.sms.total);
-    const delivered: KpiDelta = computeDelta(cur.sms.sent, prev.sms.sent);
-    const failed: KpiDelta = computeDelta(cur.sms.failed, prev.sms.failed);
-    const pendingCount = Math.max(0, cur.sms.total - cur.sms.sent);
-    const pendingPrev = Math.max(0, prev.sms.total - prev.sms.sent);
-    const pending: KpiDelta = computeDelta(pendingCount, pendingPrev);
+  const delivered = computeDelta(
+    data.sms.sent,
+    previous.sms.sent
+  );
 
-    const uniquePatients = cur.patients.total;
-    const uniquePatientsPrev = prev.patients.total;
-    const patients: KpiDelta = computeDelta(uniquePatients, uniquePatientsPrev);
+  const failed = computeDelta(
+    data.sms.failed,
+    previous.sms.failed
+  );
 
-    return { smsSent, delivered, pending, failed, patients };
-  }, [data, previous]);
+  const pending = computeDelta(
+    Math.max(0, data.sms.total - data.sms.sent),
+    Math.max(0, previous.sms.total - previous.sms.sent)
+  );
+
+  const patients = computeDelta(
+    data.patients.total,
+    previous.patients.total
+  );
+
+  return {
+    smsSent,
+    delivered,
+    failed,
+    pending,
+    patients,
+  };
+}, [data, previous]);
 
   const smsSeries = useMemo(() => {
     if (!data) return null;
@@ -454,29 +484,33 @@ export default function ReportsPage() {
             />
             <StatCard
               label="Delivered"
-              value={data.sms.sent}
+              value={data?.sms?.sent ?? 0}
               sub={kpis ? deltaText(kpis.delivered) : "vs previous: —"}
               color="emerald"
               icon={<DeliveryIcon />}
             />
             <StatCard
               label="Pending"
-              value={Math.max(0, data.sms.total - data.sms.sent)}
+              value={Math.max(0, (data?.sms?.total ?? 0) - (data?.sms?.sent ?? 0))}
               sub={kpis ? deltaText(kpis.pending) : "vs previous: —"}
               color="amber"
               icon={<ClockIcon />}
             />
             <StatCard
               label="Failed"
-              value={data.sms.failed}
+              value={data?.sms?.failed ?? 0}
               sub={kpis ? deltaText(kpis.failed) : "vs previous: —"}
               color="rose"
               icon={<ErrorIcon />}
             />
             <StatCard
               label="Unique Patients"
-              value={data.patients.total}
-              sub={data.patients.thisMonth ? `+${data.patients.thisMonth} this month` : "vs previous: —"}
+              value={data?.patients?.total ?? 0}
+              sub={
+                data?.patients?.thisMonth
+                ? `+${data.patients.thisMonth} this month`
+                : "vs previous: —"
+              }
               color="violet"
               icon={<UserIcon />}
             />
