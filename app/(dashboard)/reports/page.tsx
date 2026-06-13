@@ -525,7 +525,7 @@ export default function ReportsPage() {
                     <h3 className="text-sm font-semibold text-slate-900">SMS Performance</h3>
                     <p className="mt-1 text-sm text-slate-500">Sent, delivered and failed over time</p>
                   </div>
-                  <Badge variant="outline">Last months</Badge>
+                  <Badge status="outline" label="Last months" />
                 </div>
                 <div className="mt-5">
                   {smsSeries && smsSeries.labels.length ? (
@@ -544,7 +544,7 @@ export default function ReportsPage() {
                     <h3 className="text-sm font-semibold text-slate-900">SMS by Type</h3>
                     <p className="mt-1 text-sm text-slate-500">Appointment, medication, vaccination & more</p>
                   </div>
-                  <Badge variant="outline">Donut</Badge>
+                  <Badge status="outline" label="Donut" />
                 </div>
                 <div className="mt-5">
                   {/* API currently doesn’t provide SMS type breakdown; keep UI skeleton/empty state */}
@@ -593,7 +593,7 @@ export default function ReportsPage() {
                   <h3 className="text-sm font-semibold text-slate-900">Patient Engagement</h3>
                   <p className="mt-1 text-sm text-slate-500">Top patients with most reminders and delivery rate</p>
                 </div>
-                <Badge variant="outline">Optional</Badge>
+                <Badge status="outline" label="Optional" />
               </div>
 
               <div className="p-6">
