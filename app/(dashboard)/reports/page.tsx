@@ -447,7 +447,7 @@ export default function ReportsPage() {
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
             <StatCard
               label="SMS Sent"
-              value={data.sms.total}
+              value={data?.sms?.total ?? 0}
               sub={kpis ? deltaText(kpis.smsSent) : "vs previous: —"}
               color="blue"
               icon={<SmsIcon />}
