@@ -1,15 +1,19 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getSession, requireAuth } from "@/lib/auth";
-
 import { Badge } from "@/components/ui/Badge";
 import { formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  // Restrict access to ADMIN and RECEPTIONIST only
-  await requireAuth(["ADMIN", "RECEPTIONIST"]);
+  try {
+    // Restrict access to ADMIN and RECEPTIONIST only
+    await requireAuth(["ADMIN", "RECEPTIONIST"]);
+  } catch (error) {
+    // If user is not authorized, throw error which Next.js will handle
+    throw error;
+  }
 
   const session = await getSession();
 
