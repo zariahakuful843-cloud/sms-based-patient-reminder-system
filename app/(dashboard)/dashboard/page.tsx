@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   // Restrict access to ADMIN and RECEPTIONIST only
   await requireAuth(["ADMIN", "RECEPTIONIST"]);
-  
+
   const session = await getSession();
 
   const today = new Date();
