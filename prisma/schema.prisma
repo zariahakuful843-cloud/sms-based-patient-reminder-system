@@ -10,7 +10,6 @@ datasource db {
 }
 
 
-
 model User {
   id        Int      @id @default(autoincrement())
   username  String   @unique
@@ -74,5 +73,4 @@ model ScheduledReminder {
   patient       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
   createdAt     DateTime @default(now())
 }
-
 
