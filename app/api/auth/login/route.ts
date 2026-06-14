@@ -38,7 +38,11 @@ export async function POST(req: NextRequest) {
       path: "/",
     });
     return response;
-  } catch {
-    return NextResponse.json({ error: "Server error." }, { status: 500 });
+  } catch (error) {
+    console.error("LOGIN ERROR:" , JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    return NextResponse.json(
+      { error: "Server error." , message: error instanceof Error ? error,message :String(error) },
+      { status: 500 }
+    );
   }
 }
