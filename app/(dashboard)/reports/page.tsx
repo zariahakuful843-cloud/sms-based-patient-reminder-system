@@ -267,6 +267,9 @@ export default function ReportsPage() {
     if (range.to) params.set("to", range.to);
 
     const res = await fetch(`/api/reports?${params.toString()}`);
+    if (!res.ok) {
+      throw new Error(`API Error: ${res.status} ${res.statusText}`);
+    }
     const d = (await res.json()) as ReportData;
     return d;
   }, []);

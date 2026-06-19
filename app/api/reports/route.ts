@@ -4,7 +4,7 @@ import { requireAuth } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAuth(["ADMIN", "RECEPTIONIST"]);
+    await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
   } catch {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
