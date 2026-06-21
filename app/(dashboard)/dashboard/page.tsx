@@ -41,7 +41,7 @@ export default async function DashboardPage() {
         appointmentDate: { gte: new Date() },
       },
     }),
-prisma.smsLog.count({
+prisma.sMSLog.count({
       where: { sentAt: { gte: today } },
     }),
     prisma.appointment.findMany({
