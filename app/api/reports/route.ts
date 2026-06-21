@@ -46,33 +46,58 @@ export async function GET(req: NextRequest) {
       where: dateFilter ? { appointmentDate: dateFilter } : undefined,
     }),
     prisma.appointment.count({
-      where: { status: "SCHEDULED", ...(dateFilter ? { appointmentDate: dateFilter } : {}) },
+      where: {
+        status: "SCHEDULED",
+        ...(dateFilter ? { appointmentDate: dateFilter } : {}),
+      },
     }),
     prisma.appointment.count({
-      where: { status: "COMPLETED", ...(dateFilter ? { appointmentDate: dateFilter } : {}) },
+      where: {
+        status: "COMPLETED",
+        ...(dateFilter ? { appointmentDate: dateFilter } : {}),
+      },
     }),
     prisma.appointment.count({
-      where: { status: "CANCELLED", ...(dateFilter ? { appointmentDate: dateFilter } : {}) },
+      where: {
+        status: "CANCELLED",
+        ...(dateFilter ? { appointmentDate: dateFilter } : {}),
+      },
     }),
     prisma.appointment.count({
-      where: { status: "MISSED", ...(dateFilter ? { appointmentDate: dateFilter } : {}) },
+      where: {
+        status: "MISSED",
+        ...(dateFilter ? { appointmentDate: dateFilter } : {}),
+      },
     }),
+
+    // SMS totals from SMSLog model
+    // NOTE: your generated Prisma client appears to expose this as `sMSLog`.
     prisma.sMSLog.count({
       where: dateFilter ? { sentAt: dateFilter } : undefined,
     }),
     prisma.sMSLog.count({
-      where: { status: "SENT", ...(dateFilter ? { sentAt: dateFilter } : {}) },
+      where: {
+        status: "SENT",
+        ...(dateFilter ? { sentAt: dateFilter } : {}),
+      },
     }),
     prisma.sMSLog.count({
-      where: { status: "FAILED", ...(dateFilter ? { sentAt: dateFilter } : {}) },
+      where: {
+        status: "FAILED",
+        ...(dateFilter ? { sentAt: dateFilter } : {}),
+      },
     }),
 
-    prisma.patient.groupBy({ by: ["gender"], _count: { id: true } }),
+    prisma.patient.groupBy({
+      by: ["gender"],
+      _count: { id: true },
+    }),
     prisma.appointment.groupBy({
       by: ["status"],
       _count: { id: true },
       where: dateFilter ? { appointmentDate: dateFilter } : undefined,
     }),
+
     // Last 6 months appointments
     prisma.$queryRaw<{ month: string; count: bigint }[]>`
       SELECT strftime('%Y-%m', appointmentDate / 1000, 'unixepoch') as month,
@@ -82,6 +107,7 @@ export async function GET(req: NextRequest) {
       ORDER BY month DESC
       LIMIT 6
     `,
+
     // Last 6 months SMS
     prisma.$queryRaw<{ month: string; count: bigint }[]>`
       SELECT strftime('%Y-%m', sentAt / 1000, 'unixepoch') as month,
@@ -97,7 +123,10 @@ export async function GET(req: NextRequest) {
     patients: {
       total: totalPatients,
       thisMonth: patientsThisMonth,
-      byGender: patientsByGender.map((g) => ({ gender: g.gender, count: Number(g._count.id) })),
+      byGender: patientsByGender.map((g) => ({
+        gender: g.gender,
+        count: Number(g._count.id),
+      })),
     },
     appointments: {
       total: totalAppointments,
@@ -118,7 +147,11 @@ export async function GET(req: NextRequest) {
       total: totalSMS,
       sent: sentSMS,
       failed: failedSMS,
-      byMonth: smsByMonth.map((m) => ({ month: m.month, count: Number(m.count) })),
+      byMonth: smsByMonth.map((m) => ({
+        month: m.month,
+        count: Number(m.count),
+      })),
     },
   });
 }
+
