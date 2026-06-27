@@ -89,6 +89,10 @@ export async function POST(req: NextRequest) {
 
     const result = await sendSMS({ to, message, senderId: undefined });
 
+    if (result.status === "FAILED") {
+      console.warn("[SMS SEND SINGLE] Failed to send SMS to", to, "Error:", result.error);
+    }
+
     const log = await prisma.sMSLog.update({
       where: { id: pending.id },
       data: {
