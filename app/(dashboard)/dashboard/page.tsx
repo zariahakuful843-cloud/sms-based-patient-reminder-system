@@ -8,8 +8,8 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   try {
-    // Restrict access to ADMIN and RECEPTIONIST only
-    await requireAuth(["ADMIN", "RECEPTIONIST"]);
+    // Restrict access to ADMIN, RECEPTIONIST, DOCTOR, and NURSE
+    await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
   } catch (error) {
     // If user is not authorized, throw error which Next.js will handle
     throw error;

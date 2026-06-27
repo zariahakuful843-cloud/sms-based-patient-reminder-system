@@ -14,8 +14,8 @@ type SMSLog = {
   patientName?: string;
   phoneNumber: string;
   message: string;
-  messageType: string;
-  deliveryStatus: string;
+  reminderType: string;
+  status: string;
   sentAt: string;
   patient?: { id: number; fullName: string };
 };
@@ -1006,14 +1006,14 @@ export default function SMSPage() {
                         <td className="px-4 py-3 font-mono text-slate-600">{log.phoneNumber}</td>
                         <td className="px-4 py-3">
                           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-                            {log.messageType}
+                            {log.reminderType}
                           </span>
                         </td>
                         <td className="max-w-xs px-4 py-3 text-slate-600">
                           <p className="truncate">{log.message}</p>
                         </td>
                         <td className="px-4 py-3">
-                          <Badge status={log.deliveryStatus} />
+                          <Badge status={log.status} />
                         </td>
                         <td className="px-4 py-3 text-slate-500">{formatDateTime(log.sentAt)}</td>
                       </tr>

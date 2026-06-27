@@ -20,8 +20,8 @@ type Appointment = {
 type SMSLog = {
   id: number;
   message: string;
-  deliveryStatus: string;
-  messageType: string;
+  status: string;
+  reminderType: string;
   sentAt: string;
 };
 
@@ -182,7 +182,7 @@ export default function PatientDetailPage() {
                     <div className="flex items-start justify-between gap-4">
                       <p className="text-sm text-slate-700 flex-1">{s.message}</p>
                       <div className="shrink-0 text-right">
-                        <Badge status={s.deliveryStatus} />
+                        <Badge status={s.status} />
                         <p className="mt-1 text-xs text-slate-400">{formatDateTime(s.sentAt)}</p>
                       </div>
                     </div>
