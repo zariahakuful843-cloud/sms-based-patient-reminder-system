@@ -1,43 +1,38 @@
-# TODO - SMS & Reminders Module
+# TODO - SMS & Reminders Page Redesign (UI only)
 
-## SMS integration + message templates
-- [ ] Update `lib/sms.ts` to use env vars `ARKESEL_API_KEY`, `ARKESEL_SMS_URL`, `ARKESEL_SENDER_ID`.
-- [ ] Sender fallback: if `ARKESEL_SENDER_ID` missing, use `SMSReminder`.
-- [ ] Implement reminder message generator for the 6 reminder types exactly as specified.
+## Step 1: Gather required backend data contracts
+- [x] Confirm SMS stats availability via `/api/reports` (sms.total, sms.sent, sms.failed)
+- [x] Confirm scheduled reminders availability via `/api/sms/scheduled`
+- [x] Confirm send-due processing via `/api/sms/scheduled/send-due`
+- [x] Confirm SMS logs availability via `/api/sms/logs`
+- [x] Confirm test SMS endpoint `/api/sms/test` is admin-restricted
 
-## Database
-- [ ] Update `prisma/schema.prisma` to add `ScheduledReminder` model.
-- [ ] Create/update migration.
+## Step 2: Implement UI redesign
+- [x] Edit ONLY `app/(dashboard)/sms/page.tsx`
+- [ ] Replace tab navigation with 2 primary tabs: Automatic Reminders + Manual SMS
+- [ ] Add statistics cards using backend values (no derivations that aren’t already in backend)
+- [ ] Implement Automatic Reminders tab:
+  - [ ] Automatic Reminder Service card + placeholder if metadata missing
+  - [ ] Upcoming Scheduled Reminders (table)
+  - [ ] Consolidate Reminder Queue + Reminder History without duplicating dataset
+  - [ ] Move Send Due Now button here
+- [ ] Implement Manual SMS tab:
+  - [ ] Select Patient
+  - [ ] Phone Number
+  - [ ] Reminder Type
+  - [ ] Appointment Date/Time
+  - [ ] Editable Message
+  - [ ] Reset to Default Template action
+  - [ ] Conversation-style preview with recipient, reminder type, message, char count
+- [ ] Keep Bulk SMS under collapsed “More Actions” section (preserve existing API calls)
+- [ ] Keep Recent SMS Activity as a single responsive table:
+  - [ ] Search
+  - [ ] Date range filter
+  - [ ] Status filter
+  - [ ] Pagination
+- [ ] Preserve existing functionality (send single, bulk, schedule create, delete, send due, send test)
 
-## Backend APIs
-- [ ] Add `app/api/sms/send-single/route.ts` (store SMS in `SMSLog`).
-- [ ] Add `app/api/sms/send-bulk/route.ts` (bulk send + per-recipient `SMSLog`).
-- [ ] Add `app/api/sms/test/route.ts` (admin test SMS feature).
-- [ ] Add `app/api/sms/scheduled/route.ts`:
-  - [ ] CRUD/list scheduled reminders
-  - [ ] Endpoint to execute due reminders (scheduledAt <= now)
-
-## Frontend (UI)
-- [ ] Rewrite `app/(dashboard)/sms/page.tsx` into the required module:
-  - [ ] Send Single SMS (required fields + message preview)
-  - [ ] Send Bulk SMS
-  - [ ] SMS History table
-  - [ ] Scheduled Reminders section
-  - [ ] Failed Messages view
-- [ ] Add loading indicators, success/error handling.
-- [ ] Ensure responsive layout.
-
-## Reports & Analytics (UI)
-- [ ] Redesign `app/(dashboard)/reports/page.tsx` into a modern hospital-grade dashboard UI
-- [ ] KPI cards (SMS Sent/Delivered/Pending/Failed/Unique Patients) with color coding and vs-previous comparison
-- [ ] Analytics section with line + donut charts and loading skeletons/empty states
-- [ ] Recent SMS Activity table with search, pagination, status badges
-- [ ] Optional: Patient Engagement table
-- [ ] Export Report + filter controls (UI only; keep backend calls intact)
-
-## Verification
-- [ ] `npm run dev`
-- [ ] `npx prisma migrate dev`
-- [ ] `npx prisma generate`
-- [ ] Manual tests: send single, bulk send, test SMS, scheduled reminders execution, history + failed filters.
+## Step 3: Validate build
+- [ ] Run typecheck / lint (if available)
+- [ ] Run Next.js build (if feasible)
 

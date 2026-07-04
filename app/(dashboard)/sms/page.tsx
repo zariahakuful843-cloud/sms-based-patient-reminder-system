@@ -636,45 +636,12 @@ export default function SMSPage() {
         description="Send, schedule, and track SMS reminders"
       />
 
-      <Tabs value={tab} onChange={setTab} />
+      {/* Redesign placeholder: primary tabs + stats will be implemented next. */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <Tabs value={tab} onChange={setTab} />
+      </div>
 
-      <Card>
-        <CardHeader
-          title="Test SMS"
-          description="Send a sample SMS to verify delivery (ADMIN login required)."
-          action={
-            <Button size="sm" onClick={onSendDueNow} loading={busy}>
-              Send Due Now
-            </Button>
-          }
-        />
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-3 items-end">
-            <div className="flex-1">
-              <Input
-                label="Phone Number"
-                required
-                value={testPhone}
-                onChange={(e) => setTestPhone(e.target.value)}
-                placeholder="+233XXXXXXXXX"
-              />
-            </div>
-            <Button onClick={onSendTestSMS} loading={busy}>
-              Send Test SMS
-            </Button>
-          </div>
-          {success && (
-            <div className="mt-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700 ring-1 ring-emerald-200">
-              {success}
-            </div>
-          )}
-          {error && (
-            <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 ring-1 ring-red-200">
-              {error}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+
 
       {tab === "single" && (
         <Card>
