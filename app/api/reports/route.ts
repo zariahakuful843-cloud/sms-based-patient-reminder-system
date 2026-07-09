@@ -100,20 +100,20 @@ export async function GET(req: NextRequest) {
 
     // Last 6 months appointments
     prisma.$queryRaw<{ month: string; count: bigint }[]>`
-      SELECT strftime('%Y-%m', appointmentDate / 1000, 'unixepoch') as month,
+      SELECT to_char("appointmentDate", 'YYYY-MM') as month,
              COUNT(*) as count
-      FROM Appointment
-      GROUP BY month
+      FROM "Appointment"
+      GROUP BY to_char("appointmentDate", 'YYYY-MM')
       ORDER BY month DESC
       LIMIT 6
     `,
 
     // Last 6 months SMS
     prisma.$queryRaw<{ month: string; count: bigint }[]>`
-      SELECT strftime('%Y-%m', sentAt / 1000, 'unixepoch') as month,
+      SELECT to_char("sentAt", 'YYYY-MM') as month,
              COUNT(*) as count
-      FROM SMSLog
-      GROUP BY month
+      FROM "SMSLog"
+      GROUP BY to_char("sentAt", 'YYYY-MM')
       ORDER BY month DESC
       LIMIT 6
     `,

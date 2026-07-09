@@ -19,14 +19,33 @@ export type ReminderType =
   | "FOLLOW_UP_REMINDER"
   | "LABORATORY_TEST_REMINDER";
 
+export function formatToInternational(phoneNumber: string): string {
+  // Strip all non-numeric characters except for leading +
+  let cleaned = (phoneNumber ?? "").replace(/[^\d+]/g, "");
+
+  // If it has a leading +, remove it
+  if (cleaned.startsWith("+")) {
+    cleaned = cleaned.substring(1);
+  }
+
+  // If it starts with local leading 0 (e.g. 0241234567) and has length 10
+  if (cleaned.startsWith("0") && cleaned.length === 10) {
+    cleaned = "233" + cleaned.substring(1);
+  }
+
+  return cleaned;
+}
+
 export async function sendSMS(payload: SMSPayload): Promise<SMSResult> {
   const apiKey = process.env.ARKESEL_API_KEY;
   const url = process.env.ARKESEL_SMS_URL ?? "https://sms.arkesel.com/api/v2/sms/send";
   const senderId = payload.senderId ?? process.env.ARKESEL_SENDER_ID ?? "SMSReminder";
 
+  const formattedTo = formatToInternational(payload.to);
+
   if (!apiKey) {
     // Simulation mode when no API key is configured
-    console.log(`[SMS SIMULATED] To: ${payload.to} | Msg: ${payload.message}`);
+    console.log(`[SMS SIMULATED] To: ${formattedTo} | Msg: ${payload.message}`);
     return {
       success: true,
       messageId: `SIM-${Date.now()}`,
@@ -44,7 +63,7 @@ export async function sendSMS(payload: SMSPayload): Promise<SMSResult> {
       body: JSON.stringify({
         sender: senderId,
         message: payload.message,
-        recipients: [payload.to],
+        recipients: [formattedTo],
       }),
     });
 
@@ -53,6 +72,7 @@ export async function sendSMS(payload: SMSPayload): Promise<SMSResult> {
     if (res.ok && data.status === "success") {
       return { success: true, messageId: data.data?.[0]?.id, status: "SENT" };
     }
+    console.error("[SMS ERROR] Arkesel API failure:", data);
     return {
       success: false,
       error: data.message ?? "Unknown error",
@@ -60,6 +80,7 @@ export async function sendSMS(payload: SMSPayload): Promise<SMSResult> {
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Network error";
+    console.error("[SMS ERROR] sendSMS catch block:", err);
     return { success: false, error: message, status: "FAILED" };
   }
 }

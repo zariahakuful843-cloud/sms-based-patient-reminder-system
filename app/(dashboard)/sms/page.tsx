@@ -14,8 +14,8 @@ type SMSLog = {
   patientName?: string;
   phoneNumber: string;
   message: string;
-  messageType: string;
-  deliveryStatus: string;
+  reminderType: string;
+  status: string;
   sentAt: string;
   patient?: { id: number; fullName: string };
 };
@@ -127,6 +127,51 @@ function buildPreview(params: {
   }
 }
 
+// Summary Card Component
+function SummaryCard({
+  icon,
+  label,
+  value,
+  trend,
+  color,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  trend?: string;
+  color: "blue" | "green" | "amber" | "red";
+}) {
+  const colorMap = {
+    blue: "bg-blue-50 border-blue-100 text-blue-700",
+    green: "bg-emerald-50 border-emerald-100 text-emerald-700",
+    amber: "bg-amber-50 border-amber-100 text-amber-700",
+    red: "bg-red-50 border-red-100 text-red-700",
+  };
+
+  const iconColorMap = {
+    blue: "text-blue-600",
+    green: "text-emerald-600",
+    amber: "text-amber-600",
+    red: "text-red-600",
+  };
+
+  return (
+    <div className={`rounded-xl border p-4 sm:p-5 ${colorMap[color]}`}>
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-xs sm:text-sm font-medium opacity-80">{label}</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-bold">{value}</p>
+          {trend && <p className="mt-1 text-xs opacity-70">{trend}</p>}
+        </div>
+        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${iconColorMap[color]} opacity-70`}>
+          {icon}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Tabs Component
 function Tabs({
   value,
   onChange,
@@ -143,16 +188,16 @@ function Tabs({
   ] as const;
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-4">
       {items.map((it) => (
         <button
           key={it.value}
           type="button"
           onClick={() => onChange(it.value)}
-          className={`rounded-full px-4 py-2 text-xs sm:text-sm font-semibold transition-colors ring-1 ring-inset ${
+          className={`px-4 py-2 text-sm font-medium transition-all border-b-2 ${
             value === it.value
-              ? "bg-blue-600 text-white ring-blue-600"
-              : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-slate-600 hover:text-slate-900"
           }`}
         >
           {it.label}
@@ -184,6 +229,9 @@ export default function SMSPage() {
   const [scheduledStatus, setScheduledStatus] = useState("");
   const [scheduledPage, setScheduledPage] = useState(1);
   const scheduledLimit = 10;
+
+  // Summary stats
+  const [stats, setStats] = useState({ sent: 0, delivered: 0, pending: 0, failed: 0 });
 
   // Feedback + busy
   const [success, setSuccess] = useState<string>("");
@@ -246,6 +294,24 @@ export default function SMSPage() {
       const r = await fetch(`/api/patients?limit=200`);
       const d = await r.json();
       setPatients(d.patients ?? []);
+    })();
+  }, []);
+
+  // Fetch stats
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch(`/api/sms/logs?limit=1`);
+        const d = await r.json();
+        const allLogs = d.logs ?? [];
+        const sent = allLogs.filter((l: SMSLog) => l.status === "SENT").length;
+        const failed = allLogs.filter((l: SMSLog) => l.status === "FAILED").length;
+        const total = d.total ?? 0;
+        const pending = Math.max(0, total - sent - failed);
+        setStats({ sent: total, delivered: sent, pending, failed });
+      } catch (e) {
+        console.error("Failed to fetch stats:", e);
+      }
     })();
   }, []);
 
@@ -633,7 +699,7 @@ export default function SMSPage() {
     <div className="space-y-6">
       <PageHeader
         title="SMS & Reminders"
-        description="Send, schedule, and track SMS reminders"
+        description="Send, schedule, and track SMS reminders for patients"
       />
 
       {/* Redesign placeholder: primary tabs + stats will be implemented next. */}
@@ -641,39 +707,153 @@ export default function SMSPage() {
         <Tabs value={tab} onChange={setTab} />
       </div>
 
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <SummaryCard
+          icon={
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16h8M8 12h8m-8-4h8M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          }
+          label="SMS Sent"
+          value={stats.sent}
+          color="blue"
+        />
+        <SummaryCard
+          icon={
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          }
+          label="Delivered"
+          value={stats.delivered}
+          color="green"
+        />
+        <SummaryCard
+          icon={
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          }
+          label="Pending"
+          value={stats.pending}
+          color="amber"
+        />
+        <SummaryCard
+          icon={
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          }
+          label="Failed"
+          value={stats.failed}
+          color="red"
+        />
+      </div>
 
+      {/* Alerts */}
+      {success && (
+        <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800 flex items-start gap-3">
+          <svg className="h-5 w-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+          </svg>
+          <div className="flex-1">{success}</div>
+        </div>
+      )}
 
-      {tab === "single" && (
-        <Card>
-          <CardHeader
-            title="Send Single SMS"
-            description="Select reminder type and we generate the SMS content automatically."
-          />
-          <CardContent>
-            <form
-              className="grid grid-cols-1 md:grid-cols-2 gap-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                onSendSingle();
-              }}
-            >
-              <Input
-                label="Patient Name"
-                required
-                value={singleForm.patientName}
-                onChange={(e) => setSingleForm((f) => ({ ...f, patientName: e.target.value }))}
-                placeholder="e.g. Ama Mensah"
-              />
+      {error && (
+        <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800 flex items-start gap-3">
+          <svg className="h-5 w-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+          </svg>
+          <div className="flex-1">{error}</div>
+        </div>
+      )}
 
+      {/* Tabs */}
+      <div className="border-b border-slate-200">
+        <Tabs value={tab} onChange={setTab} />
+      </div>
+
+      {/* Test SMS Card */}
+      <Card>
+        <CardHeader
+          title="Test SMS"
+          description="Send a sample SMS to verify delivery (ADMIN login required)."
+          action={
+            <Button size="sm" onClick={onSendDueNow} loading={busy}>
+              Send Due Now
+            </Button>
+          }
+        />
+        <CardContent>
+          <div className="flex flex-col sm:flex-row gap-3 items-end">
+            <div className="flex-1">
               <Input
                 label="Phone Number"
                 required
-                value={singleForm.phoneNumber}
-                onChange={(e) => setSingleForm((f) => ({ ...f, phoneNumber: e.target.value }))}
+                value={testPhone}
+                onChange={(e) => setTestPhone(e.target.value)}
                 placeholder="+233XXXXXXXXX"
               />
+            </div>
+            <Button onClick={onSendTestSMS} loading={busy}>
+              Send Test SMS
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-              <div className="md:col-span-2">
+
+      {/* Single SMS Tab */}
+      {tab === "single" && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card>
+            <CardHeader title="Send Single SMS" description="Select reminder type and we generate the SMS content automatically." />
+            <CardContent>
+              <form
+                className="space-y-4"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  onSendSingle();
+                }}
+              >
+                <div>
+                  <label className="text-sm font-medium text-slate-700 mb-2 block">Select Patient (optional)</label>
+                  <select
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={singleForm.patientId}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      handleSinglePatientSelect(id);
+                      setSingleForm((f) => ({ ...f, patientId: id }));
+                    }}
+                  >
+                    <option value="">Use manual Patient Name & Phone</option>
+                    {patients.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.fullName} ({p.phoneNumber})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <Input
+                  label="Patient Name"
+                  required
+                  value={singleForm.patientName}
+                  onChange={(e) => setSingleForm((f) => ({ ...f, patientName: e.target.value }))}
+                  placeholder="e.g. Ama Mensah"
+                />
+
+                <Input
+                  label="Phone Number"
+                  required
+                  value={singleForm.phoneNumber}
+                  onChange={(e) => setSingleForm((f) => ({ ...f, phoneNumber: e.target.value }))}
+                  placeholder="+233XXXXXXXXX"
+                />
+
                 <Select
                   label="Reminder Type"
                   required
@@ -681,233 +861,223 @@ export default function SMSPage() {
                   onChange={(e) => setSingleForm((f) => ({ ...f, reminderType: e.target.value as ReminderTypeKey }))}
                   options={REMINDER_TYPES.map((t) => ({ value: t.value, label: t.label }))}
                 />
-              </div>
 
-              <div className="md:col-span-2">
-                <label className="text-sm font-medium text-slate-700">Select Patient (optional)</label>
-                <select
-                  className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={singleForm.patientId}
-                  onChange={(e) => {
-                    const id = e.target.value;
-                    handleSinglePatientSelect(id);
-                    setSingleForm((f) => ({ ...f, patientId: id }));
-                  }}
-                >
-                  <option value="">Use manual Patient Name & Phone</option>
-                  {patients.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.fullName} ({p.phoneNumber})
-                    </option>
-                  ))}
-                </select>
-              </div>
+                {singleForm.reminderType === "APPOINTMENT_REMINDER" && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input
+                      label="Date"
+                      required
+                      type="date"
+                      value={singleForm.appointmentDate}
+                      onChange={(e) => setSingleForm((f) => ({ ...f, appointmentDate: e.target.value }))}
+                    />
+                    <Input
+                      label="Time"
+                      required
+                      type="time"
+                      value={singleForm.appointmentTime}
+                      onChange={(e) => setSingleForm((f) => ({ ...f, appointmentTime: e.target.value }))}
+                    />
+                  </div>
+                )}
 
-              {singleForm.reminderType === "APPOINTMENT_REMINDER" && (
-                <>
+                {singleForm.reminderType === "MEDICATION_REMINDER" && (
+                  <Input
+                    label="Medication Name"
+                    required
+                    value={singleForm.medicationName}
+                    onChange={(e) => setSingleForm((f) => ({ ...f, medicationName: e.target.value }))}
+                    placeholder="e.g. Amoxicillin 500mg"
+                  />
+                )}
+
+                {singleForm.reminderType === "VACCINATION_REMINDER" && (
                   <Input
                     label="Date"
                     required
                     type="date"
-                    value={singleForm.appointmentDate}
-                    onChange={(e) => setSingleForm((f) => ({ ...f, appointmentDate: e.target.value }))}
+                    value={singleForm.vaccinationDate}
+                    onChange={(e) => setSingleForm((f) => ({ ...f, vaccinationDate: e.target.value }))}
                   />
+                )}
+
+                {singleForm.reminderType === "ANTENATAL_REMINDER" && (
                   <Input
-                    label="Time"
+                    label="Date"
                     required
-                    type="time"
-                    value={singleForm.appointmentTime}
-                    onChange={(e) => setSingleForm((f) => ({ ...f, appointmentTime: e.target.value }))}
+                    type="date"
+                    value={singleForm.antenatalDate}
+                    onChange={(e) => setSingleForm((f) => ({ ...f, antenatalDate: e.target.value }))}
                   />
-                </>
-              )}
+                )}
 
-              {singleForm.reminderType === "MEDICATION_REMINDER" && (
-                <Input
-                  label="Medication Name"
-                  required
-                  value={singleForm.medicationName}
-                  onChange={(e) => setSingleForm((f) => ({ ...f, medicationName: e.target.value }))}
-                  placeholder="e.g. Amoxicillin 500mg"
-                />
-              )}
+                {singleForm.reminderType === "FOLLOW_UP_REMINDER" && (
+                  <Input
+                    label="Date"
+                    required
+                    type="date"
+                    value={singleForm.followUpDate}
+                    onChange={(e) => setSingleForm((f) => ({ ...f, followUpDate: e.target.value }))}
+                  />
+                )}
 
-              {singleForm.reminderType === "VACCINATION_REMINDER" && (
-                <Input
-                  label="Date"
-                  required
-                  type="date"
-                  value={singleForm.vaccinationDate}
-                  onChange={(e) => setSingleForm((f) => ({ ...f, vaccinationDate: e.target.value }))}
-                />
-              )}
+                {singleForm.reminderType === "LABORATORY_TEST_REMINDER" && (
+                  <Input
+                    label="Date"
+                    required
+                    type="date"
+                    value={singleForm.laboratoryTestDate}
+                    onChange={(e) => setSingleForm((f) => ({ ...f, laboratoryTestDate: e.target.value }))}
+                  />
+                )}
 
-              {singleForm.reminderType === "ANTENATAL_REMINDER" && (
-                <Input
-                  label="Date"
-                  required
-                  type="date"
-                  value={singleForm.antenatalDate}
-                  onChange={(e) => setSingleForm((f) => ({ ...f, antenatalDate: e.target.value }))}
-                />
-              )}
+                <div className="flex gap-3 pt-4">
+                  <Button type="submit" loading={busy}>
+                    Send SMS
+                  </Button>
+                  <Button type="button" variant="secondary" onClick={() => setTab("history")}>
+                    View History
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
 
-              {singleForm.reminderType === "FOLLOW_UP_REMINDER" && (
-                <Input
-                  label="Date"
-                  required
-                  type="date"
-                  value={singleForm.followUpDate}
-                  onChange={(e) => setSingleForm((f) => ({ ...f, followUpDate: e.target.value }))}
-                />
-              )}
-
-              {singleForm.reminderType === "LABORATORY_TEST_REMINDER" && (
-                <Input
-                  label="Date"
-                  required
-                  type="date"
-                  value={singleForm.laboratoryTestDate}
-                  onChange={(e) => setSingleForm((f) => ({ ...f, laboratoryTestDate: e.target.value }))}
-                />
-              )}
-
-              <div className="md:col-span-2">
+          <Card>
+            <CardHeader title="Message Preview" />
+            <CardContent>
+              <div className="space-y-4">
                 <Textarea
-                  label="Message Preview"
+                  label="Generated Message"
                   value={singleForm.messagePreview}
                   readOnly
-                  rows={4}
-                  required
+                  rows={6}
                 />
-                <div className="text-xs text-slate-400 mt-1">{reminderTypeLabel(singleForm.reminderType)}</div>
+                <div className="rounded-lg bg-blue-50 border border-blue-100 p-4">
+                  <p className="text-xs font-medium text-blue-700 mb-2">Reminder Type</p>
+                  <p className="text-sm font-semibold text-blue-900">{reminderTypeLabel(singleForm.reminderType)}</p>
+                </div>
               </div>
-
-              <div className="md:col-span-2 flex gap-3">
-                <Button type="submit" loading={busy}>
-                  Send SMS
-                </Button>
-                <Button type="button" variant="secondary" onClick={() => setTab("history")}>
-                  View History
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
+      {/* Bulk SMS Tab */}
       {tab === "bulk" && (
         <Card>
-          <CardHeader
-            title="Send Bulk SMS"
-            description="Provide one recipient per line: Patient Name,Phone."
-          />
+          <CardHeader title="Send Bulk SMS" description="Provide one recipient per line: Patient Name,Phone." />
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Select
-                label="Reminder Type"
-                required
-                value={bulk.reminderType}
-                onChange={(e) => setBulk((b) => ({ ...b, reminderType: e.target.value as ReminderTypeKey }))}
-                options={REMINDER_TYPES.map((t) => ({ value: t.value, label: t.label }))}
-              />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <Select
+                  label="Reminder Type"
+                  required
+                  value={bulk.reminderType}
+                  onChange={(e) => setBulk((b) => ({ ...b, reminderType: e.target.value as ReminderTypeKey }))}
+                  options={REMINDER_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+                />
 
-              {bulk.reminderType === "APPOINTMENT_REMINDER" && (
-                <>
+                {bulk.reminderType === "APPOINTMENT_REMINDER" && (
+                  <>
+                    <Input
+                      label="Date"
+                      required
+                      type="date"
+                      value={bulk.appointmentDate}
+                      onChange={(e) => setBulk((b) => ({ ...b, appointmentDate: e.target.value }))}
+                    />
+                    <Input
+                      label="Time"
+                      required
+                      type="time"
+                      value={bulk.appointmentTime}
+                      onChange={(e) => setBulk((b) => ({ ...b, appointmentTime: e.target.value }))}
+                    />
+                  </>
+                )}
+
+                {bulk.reminderType === "MEDICATION_REMINDER" && (
+                  <Input
+                    label="Medication Name"
+                    required
+                    value={bulk.medicationName}
+                    onChange={(e) => setBulk((b) => ({ ...b, medicationName: e.target.value }))}
+                  />
+                )}
+
+                {(bulk.reminderType === "VACCINATION_REMINDER" ||
+                  bulk.reminderType === "ANTENATAL_REMINDER" ||
+                  bulk.reminderType === "FOLLOW_UP_REMINDER" ||
+                  bulk.reminderType === "LABORATORY_TEST_REMINDER") && (
                   <Input
                     label="Date"
                     required
                     type="date"
-                    value={bulk.appointmentDate}
-                    onChange={(e) => setBulk((b) => ({ ...b, appointmentDate: e.target.value }))}
+                    value={
+                      bulk.reminderType === "VACCINATION_REMINDER"
+                        ? bulk.vaccinationDate
+                        : bulk.reminderType === "ANTENATAL_REMINDER"
+                          ? bulk.antenatalDate
+                          : bulk.reminderType === "FOLLOW_UP_REMINDER"
+                            ? bulk.followUpDate
+                            : bulk.laboratoryTestDate
+                    }
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setBulk((b) => {
+                        switch (b.reminderType) {
+                          case "VACCINATION_REMINDER":
+                            return { ...b, vaccinationDate: v };
+                          case "ANTENATAL_REMINDER":
+                            return { ...b, antenatalDate: v };
+                          case "FOLLOW_UP_REMINDER":
+                            return { ...b, followUpDate: v };
+                          case "LABORATORY_TEST_REMINDER":
+                            return { ...b, laboratoryTestDate: v };
+                          default:
+                            return b;
+                        }
+                      });
+                    }}
                   />
-                  <Input
-                    label="Time"
-                    required
-                    type="time"
-                    value={bulk.appointmentTime}
-                    onChange={(e) => setBulk((b) => ({ ...b, appointmentTime: e.target.value }))}
-                  />
-                </>
-              )}
+                )}
+              </div>
 
-              {bulk.reminderType === "MEDICATION_REMINDER" && (
-                <Input
-                  label="Medication Name"
-                  required
-                  value={bulk.medicationName}
-                  onChange={(e) => setBulk((b) => ({ ...b, medicationName: e.target.value }))}
-                />
-              )}
-
-              {(bulk.reminderType === "VACCINATION_REMINDER" ||
-                bulk.reminderType === "ANTENATAL_REMINDER" ||
-                bulk.reminderType === "FOLLOW_UP_REMINDER" ||
-                bulk.reminderType === "LABORATORY_TEST_REMINDER") && (
-                <Input
-                  label="Date"
-                  required
-                  type="date"
-                  value={
-                    bulk.reminderType === "VACCINATION_REMINDER"
-                      ? bulk.vaccinationDate
-                      : bulk.reminderType === "ANTENATAL_REMINDER"
-                        ? bulk.antenatalDate
-                        : bulk.reminderType === "FOLLOW_UP_REMINDER"
-                          ? bulk.followUpDate
-                          : bulk.laboratoryTestDate
-                  }
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setBulk((b) => {
-                      switch (b.reminderType) {
-                        case "VACCINATION_REMINDER":
-                          return { ...b, vaccinationDate: v };
-                        case "ANTENATAL_REMINDER":
-                          return { ...b, antenatalDate: v };
-                        case "FOLLOW_UP_REMINDER":
-                          return { ...b, followUpDate: v };
-                        case "LABORATORY_TEST_REMINDER":
-                          return { ...b, laboratoryTestDate: v };
-                        default:
-                          return b;
-                      }
-                    });
-                  }}
-                />
-              )}
-
-              <div className="md:col-span-2">
+              <div>
                 <Textarea
-                  label="Recipients"
+                  label="Recipients (One per line)"
                   required
-                  rows={6}
+                  rows={10}
                   value={bulk.recipientsText}
                   onChange={(e) => setBulk((b) => ({ ...b, recipientsText: e.target.value }))}
+                  placeholder="John Doe,+233XXXXXXXXX&#10;Jane Doe,+233YYYYYYYY"
                 />
+                <p className="text-xs text-slate-500 mt-2">Format: Patient Name,Phone Number</p>
               </div>
+            </div>
 
-              <div className="md:col-span-2 flex gap-3">
-                <Button loading={busy} type="button" onClick={onSendBulk}>
-                  Send Bulk SMS
-                </Button>
-                <Button type="button" variant="secondary" onClick={() => setTab("failed")}>
-                  View Failed
-                </Button>
-              </div>
+            <div className="flex gap-3 mt-6">
+              <Button loading={busy} type="button" onClick={onSendBulk}>
+                Send Bulk SMS
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => setTab("failed")}>
+                View Failed
+              </Button>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {tab === "history" || tab === "failed" ? (
+      {/* SMS History / Failed Tab */}
+      {(tab === "history" || tab === "failed") && (
         <Card>
           <CardHeader
             title={tab === "failed" ? "Failed Messages" : "SMS History"}
-            description="View all SMS logs."
+            description="View all SMS activity with filtering and search"
           />
           <CardContent>
-            <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+            <div className="flex flex-col sm:flex-row gap-3 mb-6">
               <div className="flex-1">
                 <Input
                   label="Search"
@@ -937,15 +1107,12 @@ export default function SMSPage() {
               </div>
             </div>
 
-            <div className="mt-4 overflow-hidden rounded-xl ring-1 ring-slate-200 bg-white">
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
               <table className="min-w-full text-sm">
-                <thead className="bg-slate-50">
+                <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    {["Patient", "Phone", "Type", "Message", "Status", "Date Sent"].map((h) => (
-                      <th
-                        key={h}
-                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500"
-                      >
+                    {["Patient", "Phone", "Type", "Status", "Sent At"].map((h) => (
+                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
                         {h}
                       </th>
                     ))}
@@ -954,35 +1121,30 @@ export default function SMSPage() {
                 <tbody className="divide-y divide-slate-100">
                   {loadingLogs ? (
                     <tr>
-                      <td colSpan={6} className="py-12 text-center text-sm text-slate-400">
+                      <td colSpan={5} className="py-12 text-center text-sm text-slate-400">
                         Loading…
                       </td>
                     </tr>
                   ) : logs.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-12 text-center text-sm text-slate-400">
+                      <td colSpan={5} className="py-12 text-center text-sm text-slate-400">
                         No SMS logs found.
                       </td>
                     </tr>
                   ) : (
                     logs.map((log) => (
-                      <tr key={log.id} className="hover:bg-slate-50">
-                        <td className="px-4 py-3 font-medium text-slate-900">
-                          {log.patient?.fullName ?? log.patientName ?? "-"}
-                        </td>
-                        <td className="px-4 py-3 font-mono text-slate-600">{log.phoneNumber}</td>
+                      <tr key={log.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-4 py-3 font-medium text-slate-900">{log.patient?.fullName ?? log.patientName ?? "-"}</td>
+                        <td className="px-4 py-3 font-mono text-slate-600 text-sm">{log.phoneNumber}</td>
                         <td className="px-4 py-3">
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-                            {log.messageType}
+                          <span className="inline-block rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
+                            {log.reminderType}
                           </span>
                         </td>
-                        <td className="max-w-xs px-4 py-3 text-slate-600">
-                          <p className="truncate">{log.message}</p>
-                        </td>
                         <td className="px-4 py-3">
-                          <Badge status={log.deliveryStatus} />
+                          <Badge status={log.status} />
                         </td>
-                        <td className="px-4 py-3 text-slate-500">{formatDateTime(log.sentAt)}</td>
+                        <td className="px-4 py-3 text-slate-500 text-sm">{formatDateTime(log.sentAt)}</td>
                       </tr>
                     ))
                   )}
@@ -991,8 +1153,8 @@ export default function SMSPage() {
             </div>
 
             {totalPages > 1 && (
-              <div className="mt-4 flex items-center justify-between text-sm">
-                <span className="text-slate-500">
+              <div className="mt-6 flex items-center justify-between text-sm">
+                <span className="text-slate-600">
                   Showing {(page - 1) * limit + 1}–{Math.min(page * limit, total)} of {total}
                 </span>
                 <div className="flex gap-2">
@@ -1017,21 +1179,27 @@ export default function SMSPage() {
             )}
           </CardContent>
         </Card>
-      ) : null}
+      )}
 
+      {/* Scheduled Reminders Tab */}
       {tab === "scheduled" && (
         <Card>
           <CardHeader
             title="Scheduled Reminders"
-            description="Create reminders and manage scheduled sends."
-            action={<Button size="sm" onClick={onSendDueNow} loading={busy}>Send Due Now</Button>}
+            description="Create and manage scheduled SMS reminders"
+            action={
+              <Button size="sm" onClick={onSendDueNow} loading={busy}>
+                Send Due Now
+              </Button>
+            }
           />
           <CardContent>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-4">
-                <h3 className="text-sm font-semibold text-slate-900">Create Scheduled Reminder</h3>
+            <div className="grid gap-6 lg:grid-cols-2">
+              {/* Create Form */}
+              <div className="rounded-xl bg-slate-50 border border-slate-200 p-6">
+                <h3 className="text-sm font-semibold text-slate-900 mb-4">Create Scheduled Reminder</h3>
 
-                <div className="mt-4 space-y-4">
+                <div className="space-y-4">
                   <Select
                     label="Patient"
                     required
@@ -1052,7 +1220,7 @@ export default function SMSPage() {
                   />
 
                   {scheduleForm.reminderType === "APPOINTMENT_REMINDER" && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-3">
                       <Input
                         label="Appointment Date"
                         required
@@ -1061,7 +1229,7 @@ export default function SMSPage() {
                         onChange={(e) => setScheduleForm((f) => ({ ...f, appointmentDate: e.target.value }))}
                       />
                       <Input
-                        label="Appointment Time"
+                        label="Time"
                         required
                         type="time"
                         value={scheduleForm.appointmentTime}
@@ -1117,31 +1285,22 @@ export default function SMSPage() {
                   )}
 
                   <Input
-                    label="Scheduled At"
+                    label="Send At (Date & Time)"
                     required
                     type="datetime-local"
                     value={scheduleForm.scheduledAt}
                     onChange={(e) => setScheduleForm((f) => ({ ...f, scheduledAt: e.target.value }))}
                   />
 
-                  <Textarea
-                    label="Message Preview"
-                    value={(() => {
-                      const patient = patients.find((p) => String(p.id) === scheduleForm.patientId);
-                      return patient ? schedulePreview(safeFirstName(patient.fullName)) : "";
-                    })()}
-                    readOnly
-                    rows={4}
-                  />
-
-                  <Button type="button" onClick={onCreateScheduled} loading={busy}>
-                    Create Scheduled Reminder
+                  <Button type="button" onClick={onCreateScheduled} loading={busy} className="w-full">
+                    Schedule Reminder
                   </Button>
                 </div>
               </div>
 
+              {/* List */}
               <div>
-                <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+                <div className="flex flex-col sm:flex-row gap-3 mb-4">
                   <div className="flex-1">
                     <Input
                       label="Search"
@@ -1153,7 +1312,7 @@ export default function SMSPage() {
                       placeholder="Patient, phone, type…"
                     />
                   </div>
-                  <div className="w-full sm:w-52">
+                  <div className="w-full sm:w-40">
                     <Select
                       label="Status"
                       value={scheduledStatus}
@@ -1171,66 +1330,45 @@ export default function SMSPage() {
                   </div>
                 </div>
 
-                <div className="mt-4 overflow-hidden rounded-xl ring-1 ring-slate-200 bg-white">
-                  <table className="min-w-full text-sm">
-                    <thead className="bg-slate-50">
-                      <tr>
-                        {["Patient", "Phone", "Type", "Message", "Status", "Scheduled At", "Actions"].map((h) => (
-                          <th
-                            key={h}
-                            className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500"
-                          >
-                            {h}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {loadingScheduled ? (
-                        <tr>
-                          <td colSpan={7} className="py-12 text-center text-sm text-slate-400">
-                            Loading…
-                          </td>
-                        </tr>
-                      ) : scheduled.length === 0 ? (
-                        <tr>
-                          <td colSpan={7} className="py-12 text-center text-sm text-slate-400">
-                            No scheduled reminders.
-                          </td>
-                        </tr>
-                      ) : (
-                        scheduled.map((item) => (
-                          <tr key={item.id} className="hover:bg-slate-50">
-                            <td className="px-4 py-3 font-medium text-slate-900">{item.patientName}</td>
-                            <td className="px-4 py-3 font-mono text-slate-600">{item.phoneNumber}</td>
-                            <td className="px-4 py-3">
-                              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-                                {item.reminderType}
-                              </span>
-                            </td>
-                            <td className="max-w-xs px-4 py-3 text-slate-600">
-                              <p className="truncate">{item.message}</p>
-                            </td>
-                            <td className="px-4 py-3">
-                              <Badge status={item.status} />
-                            </td>
-                            <td className="px-4 py-3 text-slate-500">{formatDateTime(item.scheduledAt)}</td>
-                            <td className="px-4 py-3">
-                              <Button variant="danger" size="sm" onClick={() => onDeleteScheduled(item.id)} disabled={busy}>
-                                Delete
-                              </Button>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {loadingScheduled ? (
+                    <div className="text-center py-8 text-slate-400">Loading…</div>
+                  ) : scheduled.length === 0 ? (
+                    <div className="text-center py-8 text-slate-400">No scheduled reminders</div>
+                  ) : (
+                    scheduled.map((item) => (
+                      <div key={item.id} className="rounded-lg border border-slate-200 bg-white p-4 hover:shadow-sm transition-shadow">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-slate-900 text-sm">{item.patientName}</p>
+                            <p className="text-xs text-slate-600 font-mono mt-1">{item.phoneNumber}</p>
+                            <p className="text-xs text-slate-500 mt-2">
+                              <span className="inline-block rounded-full bg-slate-100 px-2 py-0.5">{item.reminderType}</span>
+                            </p>
+                            <p className="text-xs text-slate-400 mt-2">Scheduled: {formatDateTime(item.scheduledAt)}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge status={item.status} />
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              onClick={() => onDeleteScheduled(item.id)}
+                              disabled={busy}
+                              className="whitespace-nowrap"
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
 
                 {scheduledPages > 1 && (
                   <div className="mt-4 flex items-center justify-between text-sm">
-                    <span className="text-slate-500">
-                      Showing {(scheduledPage - 1) * scheduledLimit + 1}–{Math.min(scheduledPage * scheduledLimit, scheduledTotal)} of {scheduledTotal}
+                    <span className="text-slate-600">
+                      Page {scheduledPage} of {scheduledPages}
                     </span>
                     <div className="flex gap-2">
                       <Button
@@ -1260,4 +1398,3 @@ export default function SMSPage() {
     </div>
   );
 }
-

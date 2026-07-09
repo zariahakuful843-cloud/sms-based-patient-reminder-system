@@ -206,28 +206,31 @@ async function main() {
     prisma.sMSLog.create({
       data: {
         patientId: patients[2].id,
+        patientName: patients[2].fullName,
         phoneNumber: patients[2].phoneNumber,
         message: `Dear Kofi, this is a reminder of your appointment with Dr. Kofi Boateng at Ridge Hospital on ${yesterday.toDateString()} at 09:00 AM. Please arrive 15 minutes early.`,
-        messageType: "APPOINTMENT",
-        deliveryStatus: "SENT",
+        reminderType: "APPOINTMENT_REMINDER",
+        status: "SENT",
       },
     }),
     prisma.sMSLog.create({
       data: {
         patientId: patients[3].id,
+        patientName: patients[3].fullName,
         phoneNumber: patients[3].phoneNumber,
         message: `Dear Abena, this is a reminder of your appointment with Dr. Asare at Ridge Hospital. Please contact us to reschedule.`,
-        messageType: "APPOINTMENT",
-        deliveryStatus: "SENT",
+        reminderType: "APPOINTMENT_REMINDER",
+        status: "SENT",
       },
     }),
     prisma.sMSLog.create({
       data: {
         patientId: patients[5].id,
+        patientName: patients[5].fullName,
         phoneNumber: patients[5].phoneNumber,
         message: `Dear Akosua, this is a reminder of your appointment with Dr. Kofi Boateng at Ridge Hospital. Please arrive 15 minutes early.`,
-        messageType: "APPOINTMENT",
-        deliveryStatus: "SENT",
+        reminderType: "APPOINTMENT_REMINDER",
+        status: "SENT",
       },
     }),
   ]);
