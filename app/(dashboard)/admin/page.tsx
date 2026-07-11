@@ -42,11 +42,13 @@ export default async function AdminDashboardPage() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  // Fall back to zeros if the database is unavailable (e.g. UI-review preview
+  // deployments that run without a provisioned database).
   const [totalPatients, totalUsers, smsSentToday, appointments] = await Promise.all([
-    prisma.patient.count(),
-    prisma.user.count(),
-    prisma.sMSLog.count({ where: { sentAt: { gte: today } } }),
-    prisma.appointment.count(),
+    prisma.patient.count().catch(() => 0),
+    prisma.user.count().catch(() => 0),
+    prisma.sMSLog.count({ where: { sentAt: { gte: today } } }).catch(() => 0),
+    prisma.appointment.count().catch(() => 0),
   ]);
 
   const stats = [
