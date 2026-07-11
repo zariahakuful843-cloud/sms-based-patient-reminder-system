@@ -1,21 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requirePermission, authErrorStatus } from "@/lib/auth";
 import { sendSMS } from "@/lib/sms";
-
-
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
+    await requirePermission("sms.manage");
   } catch (err) {
-    console.error("[SMS SEND] forbidden", {
-      route: "POST /api/sms/send",
-      error: err instanceof Error ? err.message : err,
-    });
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const status = authErrorStatus(err);
+    return NextResponse.json({ error: status === 401 ? "Unauthorized" : "Forbidden" }, { status });
   }
-
 
   try {
     const body = await req.json();

@@ -1,16 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requirePermission, authErrorStatus } from "@/lib/auth";
 
 export async function GET() {
   try {
-    await requireAuth(["ADMIN"]);
-  } catch {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    await requirePermission("users.manage");
+  } catch (err) {
+    const status = authErrorStatus(err);
+    return NextResponse.json({ error: status === 401 ? "Unauthorized" : "Forbidden" }, { status });
   }
 
   const users = await prisma.user.findMany({
-    select: { id: true, username: true, email: true, role: true, name: true, createdAt: true },
+    select: {
+      id: true,
+      username: true,
+      email: true,
+      role: true,
+      name: true,
+      active: true,
+      createdAt: true,
+      department: { select: { id: true, name: true, code: true } },
+    },
     orderBy: { createdAt: "desc" },
   });
 

@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requirePermission, authErrorStatus } from "@/lib/auth";
+import { isDepartmentScoped } from "@/lib/rbac";
 
 export async function GET(req: NextRequest) {
+  let session;
   try {
-    await requireAuth();
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    session = await requirePermission("patients.read");
+  } catch (err) {
+    const status = authErrorStatus(err);
+    return NextResponse.json({ error: status === 401 ? "Unauthorized" : "Forbidden" }, { status });
   }
 
   const { searchParams } = new URL(req.url);
@@ -15,14 +18,17 @@ export async function GET(req: NextRequest) {
   const limit = parseInt(searchParams.get("limit") ?? "20");
   const skip = (page - 1) * limit;
 
-  const where = search
-    ? {
-        OR: [
-          { fullName: { contains: search } },
-          { phoneNumber: { contains: search } },
-        ],
-      }
-    : {};
+  const where: Record<string, unknown> = {};
+  if (search) {
+    where.OR = [
+      { fullName: { contains: search, mode: "insensitive" } },
+      { phoneNumber: { contains: search } },
+    ];
+  }
+  // Nurses and doctors only see patients with an appointment in their department.
+  if (isDepartmentScoped(session.role) && session.departmentId != null) {
+    where.appointments = { some: { departmentId: session.departmentId } };
+  }
 
   const [patients, total] = await Promise.all([
     prisma.patient.findMany({
@@ -42,9 +48,10 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAuth(["ADMIN", "RECEPTIONIST"]);
-  } catch {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    await requirePermission("patients.create");
+  } catch (err) {
+    const status = authErrorStatus(err);
+    return NextResponse.json({ error: status === 401 ? "Unauthorized" : "Forbidden" }, { status });
   }
 
   try {

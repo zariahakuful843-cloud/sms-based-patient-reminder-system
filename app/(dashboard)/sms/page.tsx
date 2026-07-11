@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { formatDateTime } from "@/lib/utils";
+import { useCanSendReminder } from "@/lib/session-context";
 
 type SMSLog = {
   id: number;
@@ -283,6 +284,22 @@ export default function SMSPage() {
     followUpDate: toISODate(new Date()),
     laboratoryTestDate: toISODate(new Date()),
   });
+
+  // Reminder types are filtered to what the current role is allowed to send.
+  const canSend = useCanSendReminder();
+  const allowedReminderTypes = useMemo(
+    () => REMINDER_TYPES.filter((t) => canSend(t.value)),
+    [canSend]
+  );
+
+  useEffect(() => {
+    if (allowedReminderTypes.length === 0) return;
+    const allowed = allowedReminderTypes.map((t) => t.value);
+    const first = allowedReminderTypes[0].value;
+    setSingleForm((f) => (allowed.includes(f.reminderType) ? f : { ...f, reminderType: first }));
+    setBulk((b) => (allowed.includes(b.reminderType) ? b : { ...b, reminderType: first }));
+    setScheduleForm((s) => (allowed.includes(s.reminderType) ? s : { ...s, reminderType: first }));
+  }, [allowedReminderTypes]);
 
   useEffect(() => {
     setSuccess("");
@@ -859,7 +876,7 @@ export default function SMSPage() {
                   required
                   value={singleForm.reminderType}
                   onChange={(e) => setSingleForm((f) => ({ ...f, reminderType: e.target.value as ReminderTypeKey }))}
-                  options={REMINDER_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+                  options={allowedReminderTypes.map((t) => ({ value: t.value, label: t.label }))}
                 />
 
                 {singleForm.reminderType === "APPOINTMENT_REMINDER" && (
@@ -975,7 +992,7 @@ export default function SMSPage() {
                   required
                   value={bulk.reminderType}
                   onChange={(e) => setBulk((b) => ({ ...b, reminderType: e.target.value as ReminderTypeKey }))}
-                  options={REMINDER_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+                  options={allowedReminderTypes.map((t) => ({ value: t.value, label: t.label }))}
                 />
 
                 {bulk.reminderType === "APPOINTMENT_REMINDER" && (
@@ -1216,7 +1233,7 @@ export default function SMSPage() {
                     required
                     value={scheduleForm.reminderType}
                     onChange={(e) => setScheduleForm((f) => ({ ...f, reminderType: e.target.value as ReminderTypeKey }))}
-                    options={REMINDER_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+                    options={allowedReminderTypes.map((t) => ({ value: t.value, label: t.label }))}
                   />
 
                   {scheduleForm.reminderType === "APPOINTMENT_REMINDER" && (

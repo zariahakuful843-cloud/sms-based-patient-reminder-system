@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { SessionProvider } from "@/lib/session-context";
 import type { ReactNode } from "react";
 
 
@@ -17,7 +18,17 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   const session = await getSession();
   if (!session) redirect("/login");
 
+  const clientSession = {
+    userId: session.userId,
+    username: session.username,
+    name: session.name,
+    role: session.role,
+    departmentId: session.departmentId ?? null,
+    department: session.department ?? null,
+  };
+
   return (
+    <SessionProvider value={clientSession}>
     <div className="flex h-screen overflow-hidden bg-slate-50">
       <Sidebar role={session.role} />
       <div className="flex flex-1 flex-col overflow-hidden">
@@ -68,5 +79,6 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
     </div>
+    </SessionProvider>
   );
 }

@@ -6,9 +6,11 @@ import Link from "next/link";
 import { PageHeader } from "@/components/layout/Header";
 import { Button } from "@/components/ui/Button";
 import { Input, Select, Textarea } from "@/components/ui/Input";
+import { useCan } from "@/lib/session-context";
 
 export default function NewPatientPage() {
   const router = useRouter();
+  const canCreate = useCan()("patients.create");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({
@@ -43,6 +45,15 @@ export default function NewPatientPage() {
     }
 
     router.push(`/patients/${data.id}`);
+  }
+
+  if (!canCreate) {
+    return (
+      <div>
+        <PageHeader title="Register Patient" description="You do not have permission to register patients." />
+        <p className="text-sm text-slate-500">Only reception staff can register new patients.</p>
+      </div>
+    );
   }
 
   return (

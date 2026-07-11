@@ -1,11 +1,12 @@
 "use client";
 
 import type React from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { homeFor } from "@/lib/rbac";
 
 function MedicalIcon() {
   return (
@@ -100,31 +101,81 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [demoRoles, setDemoRoles] = useState<string[]>([]);
+  const [demoBusy, setDemoBusy] = useState<string | null>(null);
 
   const usernameId = useMemo(() => "username", []);
   const passwordId = useMemo(() => "password", []);
 
+  useEffect(() => {
+    let active = true;
+    fetch("/api/auth/demo-status")
+      .then((r) => r.json())
+      .then((d) => {
+        if (active && d?.enabled) setDemoRoles(Array.isArray(d.roles) ? d.roles : []);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  async function handleDemoLogin(role: string) {
+    setError("");
+    setDemoBusy(role);
+    try {
+      const res = await fetch("/api/auth/demo-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Demo login failed.");
+        return;
+      }
+      router.push(homeFor(data.role));
+      router.refresh();
+    } catch {
+      setError("Unable to reach the server. Please try again.");
+    } finally {
+      setDemoBusy(null);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
     setError("");
 
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-
-    const data = await res.json();
-    setLoading(false);
-
-    if (!res.ok) {
-      setError(data.error ?? "Invalid credentials. Please try again.");
+    if (!form.username.trim() || !form.password) {
+      setError("Please enter both your username and password.");
       return;
     }
 
-    router.push("/dashboard");
-    router.refresh();
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error ?? "Invalid credentials. Please try again.");
+        return;
+      }
+
+      // Redirect to the dashboard that matches the authenticated user's role.
+      router.push(homeFor(data.role));
+      router.refresh();
+    } catch {
+      setError("Unable to reach the server. Please check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -236,6 +287,30 @@ export default function LoginPage() {
                     {loading ? "Signing in…" : "Sign in"}
                   </Button>
                 </form>
+
+                {demoRoles.length > 0 && (
+                  <div className="mt-6 border-t border-slate-200 pt-5">
+                    <p className="text-center text-xs font-semibold uppercase tracking-wide text-amber-600">
+                      Preview demo — no database, UI review only
+                    </p>
+                    <p className="mt-1 text-center text-xs text-slate-500">
+                      Sign in as any role to explore its dashboard.
+                    </p>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      {demoRoles.map((role) => (
+                        <button
+                          key={role}
+                          type="button"
+                          onClick={() => handleDemoLogin(role)}
+                          disabled={demoBusy !== null}
+                          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-blue-300 hover:bg-blue-50 disabled:opacity-60"
+                        >
+                          {demoBusy === role ? "Signing in…" : role.charAt(0) + role.slice(1).toLowerCase()}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <p className="mt-6 text-center text-xs text-slate-500">
                   Helping healthcare facilities improve patient communication.

@@ -10,24 +10,34 @@ import { Badge } from "@/components/ui/Badge";
 
 type Appointment = {
   id: number;
-  doctorName: string;
+  doctorId: number | null;
+  departmentId: number | null;
   appointmentDate: string;
+  appointmentType: string | null;
   status: string;
   reminderSent: boolean;
   notes?: string;
   patient: { id: number; fullName: string; phoneNumber: string };
 };
+type Department = { id: number; name: string };
+type Doctor = { id: number; name: string };
+
+const APPOINTMENT_TYPES = ["Consultation", "Follow-up", "Review", "Vaccination", "Antenatal", "Procedure"];
 
 export default function EditAppointmentPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [appt, setAppt] = useState<Appointment | null>(null);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   const [form, setForm] = useState({
-    doctorName: "",
+    departmentId: "",
+    doctorId: "",
+    appointmentType: "Consultation",
     appointmentDate: "",
     appointmentTime: "",
     status: "",
@@ -35,13 +45,21 @@ export default function EditAppointmentPage() {
   });
 
   useEffect(() => {
+    fetch("/api/departments?activeOnly=1")
+      .then((r) => r.json())
+      .then((d) => setDepartments(Array.isArray(d) ? d : []));
+  }, []);
+
+  useEffect(() => {
     fetch(`/api/appointments/${id}`)
       .then((r) => r.json())
-      .then((data) => {
+      .then((data: Appointment) => {
         setAppt(data);
         const dt = new Date(data.appointmentDate);
         setForm({
-          doctorName: data.doctorName,
+          departmentId: data.departmentId ? String(data.departmentId) : "",
+          doctorId: data.doctorId ? String(data.doctorId) : "",
+          appointmentType: data.appointmentType ?? "Consultation",
           appointmentDate: dt.toISOString().split("T")[0],
           appointmentTime: dt.toTimeString().slice(0, 5),
           status: data.status,
@@ -50,6 +68,16 @@ export default function EditAppointmentPage() {
         setLoading(false);
       });
   }, [id]);
+
+  useEffect(() => {
+    if (!form.departmentId) {
+      setDoctors([]);
+      return;
+    }
+    fetch(`/api/users/doctors?departmentId=${form.departmentId}`)
+      .then((r) => r.json())
+      .then((d) => setDoctors(Array.isArray(d) ? d : []));
+  }, [form.departmentId]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -61,7 +89,14 @@ export default function EditAppointmentPage() {
     const res = await fetch(`/api/appointments/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, appointmentDate }),
+      body: JSON.stringify({
+        departmentId: form.departmentId ? parseInt(form.departmentId) : undefined,
+        doctorId: form.doctorId ? parseInt(form.doctorId) : "",
+        appointmentType: form.appointmentType,
+        appointmentDate,
+        status: form.status,
+        notes: form.notes,
+      }),
     });
 
     const data = await res.json();
@@ -72,13 +107,22 @@ export default function EditAppointmentPage() {
   }
 
   async function handleDelete() {
-    if (!confirm("Delete this appointment?")) return;
+    if (!confirm("Cancel this appointment?")) return;
     await fetch(`/api/appointments/${id}`, { method: "DELETE" });
     router.push("/appointments");
   }
 
   if (loading) return <div className="py-20 text-center text-sm text-slate-400">Loading…</div>;
   if (!appt) return <div className="py-20 text-center text-sm text-slate-400">Appointment not found.</div>;
+
+  const departmentOptions = [
+    { value: "", label: "Select a department…" },
+    ...departments.map((d) => ({ value: String(d.id), label: d.name })),
+  ];
+  const doctorOptions = [
+    { value: "", label: form.departmentId ? "Any available doctor (optional)" : "Select a department first" },
+    ...doctors.map((d) => ({ value: String(d.id), label: d.name })),
+  ];
 
   return (
     <div>
@@ -88,7 +132,7 @@ export default function EditAppointmentPage() {
         action={
           <div className="flex gap-2">
             <Link href="/appointments"><Button variant="secondary" size="sm">Back</Button></Link>
-            <Button variant="danger" size="sm" onClick={handleDelete}>Delete</Button>
+            <Button variant="danger" size="sm" onClick={handleDelete}>Cancel Appointment</Button>
           </div>
         }
       />
@@ -106,12 +150,31 @@ export default function EditAppointmentPage() {
             <Badge status={appt.status} />
           </div>
 
-          <Input
-            id="doctorName"
-            label="Doctor / Clinician"
+          <Select
+            id="departmentId"
+            label="Department"
             required
-            value={form.doctorName}
-            onChange={(e) => setForm({ ...form, doctorName: e.target.value })}
+            value={form.departmentId}
+            onChange={(e) => setForm((f) => ({ ...f, departmentId: e.target.value, doctorId: "" }))}
+            options={departmentOptions}
+          />
+
+          <Select
+            id="doctorId"
+            label="Doctor (optional)"
+            value={form.doctorId}
+            disabled={!form.departmentId}
+            onChange={(e) => setForm({ ...form, doctorId: e.target.value })}
+            options={doctorOptions}
+          />
+
+          <Select
+            id="appointmentType"
+            label="Appointment Type"
+            required
+            value={form.appointmentType}
+            onChange={(e) => setForm({ ...form, appointmentType: e.target.value })}
+            options={APPOINTMENT_TYPES.map((t) => ({ value: t, label: t }))}
           />
 
           <div className="grid gap-4 sm:grid-cols-2">

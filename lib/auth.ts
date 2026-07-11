@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { can, normalizeRole, type Permission } from "./rbac";
 
 const SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET ?? "fallback-secret-change-in-production"
@@ -10,6 +11,8 @@ export type JWTPayload = {
   username: string;
   role: string;
   name: string;
+  departmentId?: number | null;
+  department?: string | null;
 };
 
 export async function signToken(payload: JWTPayload): Promise<string> {
@@ -41,7 +44,6 @@ export async function requireAuth(allowedRoles?: string[]): Promise<JWTPayload> 
   const detectedRole = session?.role ?? "ANONYMOUS";
 
   // Ensure role matching is robust (case/whitespace)
-  const normalizeRole = (r: string) => (r ?? "").trim().toUpperCase();
   const normalizedDetectedRole = normalizeRole(detectedRole);
   const normalizedAllowedRoles = allowedRoles?.map(normalizeRole) ?? undefined;
 
@@ -63,6 +65,34 @@ export async function requireAuth(allowedRoles?: string[]): Promise<JWTPayload> 
     ...session,
     role: normalizedDetectedRole,
   };
+}
+
+// Permission-based guard. Prefer this over role arrays: routes declare the
+// permission they need and the RBAC matrix (lib/rbac.ts) decides access.
+// Throws "Unauthorized" (no session) or "Forbidden" (missing permission).
+export async function requirePermission(
+  permission: Permission
+): Promise<JWTPayload> {
+  const session = await getSession();
+
+  if (!session) {
+    console.warn("[AUTH] Denied: not authenticated", { permission });
+    throw new Error("Unauthorized");
+  }
+
+  const role = normalizeRole(session.role);
+  if (!can(role, permission)) {
+    console.warn("[AUTH] Denied: missing permission", { role, permission });
+    throw new Error("Forbidden");
+  }
+
+  return { ...session, role };
+}
+
+// Map an auth error thrown above to an HTTP status code.
+export function authErrorStatus(err: unknown): 401 | 403 {
+  const msg = err instanceof Error ? err.message : String(err);
+  return msg === "Unauthorized" ? 401 : 403;
 }
 
 

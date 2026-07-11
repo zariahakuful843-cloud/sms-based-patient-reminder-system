@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { formatDate, formatDateTime, calculateAge } from "@/lib/utils";
+import { useCan } from "@/lib/session-context";
 
 type Appointment = {
   id: number;
@@ -40,6 +41,11 @@ type Patient = {
 export default function PatientDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const can = useCan();
+  const canUpdate = can("patients.update");
+  const canDelete = can("patients.delete");
+  const canBook = can("appointments.manage");
+  const canViewClinical = can("patient.history.read");
   const [patient, setPatient] = useState<Patient | null>(null);
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -95,13 +101,19 @@ export default function PatientDetailPage() {
         description={`Patient ID: #${patient.id} · Registered ${formatDate(patient.createdAt)}`}
         action={
           <div className="flex gap-2">
-            <Link href={`/appointments/new?patientId=${patient.id}`}>
-              <Button size="sm" variant="secondary">Schedule Appointment</Button>
-            </Link>
-            <Button size="sm" onClick={() => setEditing(!editing)}>
-              {editing ? "Cancel Edit" : "Edit"}
-            </Button>
-            <Button size="sm" variant="danger" onClick={handleDelete}>Delete</Button>
+            {canBook && (
+              <Link href={`/appointments/new?patientId=${patient.id}`}>
+                <Button size="sm" variant="secondary">Schedule Appointment</Button>
+              </Link>
+            )}
+            {canUpdate && (
+              <Button size="sm" onClick={() => setEditing(!editing)}>
+                {editing ? "Cancel Edit" : "Edit"}
+              </Button>
+            )}
+            {canDelete && (
+              <Button size="sm" variant="danger" onClick={handleDelete}>Delete</Button>
+            )}
           </div>
         }
       />
@@ -150,7 +162,9 @@ export default function PatientDetailPage() {
           <div className="rounded-xl bg-white ring-1 ring-slate-200 shadow-sm overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
               <h3 className="text-sm font-semibold text-slate-900">Appointments ({patient.appointments.length})</h3>
-              <Link href={`/appointments/new?patientId=${patient.id}`} className="text-xs font-medium text-blue-600 hover:underline">+ New</Link>
+              {canBook && (
+                <Link href={`/appointments/new?patientId=${patient.id}`} className="text-xs font-medium text-blue-600 hover:underline">+ New</Link>
+              )}
             </div>
             {patient.appointments.length === 0 ? (
               <p className="py-8 text-center text-sm text-slate-400">No appointments yet.</p>
@@ -191,6 +205,22 @@ export default function PatientDetailPage() {
               </ul>
             )}
           </div>
+
+          {canViewClinical && (
+            <div className="rounded-xl bg-white ring-1 ring-slate-200 shadow-sm overflow-hidden">
+              <div className="border-b border-slate-100 px-5 py-4">
+                <h3 className="text-sm font-semibold text-slate-900">Clinical & Consultation History</h3>
+              </div>
+              <div className="grid gap-3 p-5 sm:grid-cols-2">
+                {["Diagnosis", "Treatment Notes", "Laboratory Requests", "Prescriptions"].map((label) => (
+                  <div key={label} className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4">
+                    <p className="text-sm font-semibold text-slate-700">{label}</p>
+                    <p className="text-xs text-slate-500">Recorded during consultation — coming soon.</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

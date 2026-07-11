@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/layout/Header";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { formatDate, calculateAge } from "@/lib/utils";
+import { useCan } from "@/lib/session-context";
 
 type Patient = {
   id: number;
@@ -19,6 +20,9 @@ type Patient = {
 };
 
 export default function PatientsPage() {
+  const can = useCan();
+  const canCreate = can("patients.create");
+  const canDelete = can("patients.delete");
   const [patients, setPatients] = useState<Patient[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
@@ -54,14 +58,16 @@ export default function PatientsPage() {
         title="Patients"
         description={`${total} registered patient${total !== 1 ? "s" : ""}`}
         action={
-          <Link href="/patients/new">
-            <Button size="sm">
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-              Register Patient
-            </Button>
-          </Link>
+          canCreate ? (
+            <Link href="/patients/new">
+              <Button size="sm">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                Register Patient
+              </Button>
+            </Link>
+          ) : undefined
         }
       />
 
@@ -99,9 +105,11 @@ export default function PatientsPage() {
               <tr>
                 <td colSpan={7} className="py-12 text-center text-sm text-slate-400">
                   No patients found.{" "}
-                  <Link href="/patients/new" className="text-blue-600 hover:underline">
-                    Register the first one.
-                  </Link>
+                  {canCreate && (
+                    <Link href="/patients/new" className="text-blue-600 hover:underline">
+                      Register the first one.
+                    </Link>
+                  )}
                 </td>
               </tr>
             ) : (
@@ -133,12 +141,14 @@ export default function PatientsPage() {
                       >
                         View
                       </Link>
-                      <button
-                        onClick={() => handleDelete(p.id, p.fullName)}
-                        className="rounded-md px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
-                      >
-                        Delete
-                      </button>
+                      {canDelete && (
+                        <button
+                          onClick={() => handleDelete(p.id, p.fullName)}
+                          className="rounded-md px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
+                        >
+                          Delete
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

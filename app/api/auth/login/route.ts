@@ -12,9 +12,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Username and password are required." }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({ where: { username } });
+    const identifier = username.trim();
+    const user = await prisma.user.findFirst({
+      where: { OR: [{ username: identifier }, { email: identifier }] },
+      include: { department: true },
+    });
     if (!user) {
       return NextResponse.json({ error: "Invalid credentials." }, { status: 401 });
+    }
+
+    if (!user.active) {
+      return NextResponse.json({ error: "Account is deactivated." }, { status: 403 });
     }
 
     const valid = await bcrypt.compare(password, user.password);
@@ -27,6 +35,8 @@ export async function POST(req: NextRequest) {
       username: user.username,
       role: user.role,
       name: user.name,
+      departmentId: user.departmentId,
+      department: user.department?.code ?? null,
     });
 
     const response = NextResponse.json({ success: true, role: user.role, name: user.name });
@@ -39,10 +49,7 @@ export async function POST(req: NextRequest) {
     });
     return response;
   } catch (error) {
-    console.error("LOGIN ERROR:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
-    return NextResponse.json(
-      { error: "Server error.", message: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
-    );
+    console.error("LOGIN ERROR:", error instanceof Error ? error.message : String(error));
+    return NextResponse.json({ error: "Server error." }, { status: 500 });
   }
 }

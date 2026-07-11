@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, authErrorStatus } from "@/lib/auth";
+import { canSendReminderType } from "@/lib/rbac";
 import { buildReminderMessageByType, sendSMS, type ReminderType } from "@/lib/sms";
 
 type Body = {
@@ -17,30 +18,13 @@ type Body = {
 };
 
 export async function POST(req: NextRequest) {
-  console.log("[SMS ENDPOINT] current user/session:", "(set below)");
-  console.log("[SMS ENDPOINT] detected role:", "(set below)");
-  console.log("[SMS ENDPOINT] endpoint called:", "POST /api/sms/send-single");
-
+  let session;
   try {
-    const session = await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
-    console.log("[SMS SEND SINGLE] current user:", {
-      userId: session.userId,
-      username: session.username,
-      role: session.role,
-      name: session.name,
-    });
-    console.log("[SMS SEND SINGLE] detected role:", session.role);
+    session = await requireAuth();
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    const status = msg === "Unauthorized" ? 401 : 403;
-    console.error("[SMS SEND SINGLE] auth failed", {
-      route: "POST /api/sms/send-single",
-      detected: "unknown",
-      error: msg,
-    });
+    const status = authErrorStatus(err);
     return NextResponse.json({ error: status === 401 ? "Unauthorized" : "Forbidden" }, { status });
   }
-
 
   try {
     const body = (await req.json()) as Body;
@@ -58,6 +42,13 @@ export async function POST(req: NextRequest) {
 
     if (!patientId || !reminderType) {
       return NextResponse.json({ error: "patientId and reminderType are required." }, { status: 400 });
+    }
+
+    if (!canSendReminderType(session.role, reminderType)) {
+      return NextResponse.json(
+        { error: `Your role is not permitted to send ${reminderType} reminders.` },
+        { status: 403 }
+      );
     }
 
     const patient = await prisma.patient.findUnique({ where: { id: patientId } });
