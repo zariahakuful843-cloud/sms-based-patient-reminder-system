@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, authErrorStatus } from "@/lib/auth";
+import { canSendReminderType } from "@/lib/rbac";
 import { buildReminderMessageByType, sendSMS, type ReminderType } from "@/lib/sms";
 
 type Recipient = {
@@ -21,27 +22,13 @@ type Body = {
 };
 
 export async function POST(req: NextRequest) {
-  console.log("[SMS ENDPOINT] endpoint called:", "POST /api/sms/send-bulk");
-
+  let session;
   try {
-    const session = await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
-    console.log("[SMS SEND BULK] current user:", {
-      userId: session.userId,
-      username: session.username,
-      role: session.role,
-      name: session.name,
-    });
-    console.log("[SMS SEND BULK] detected role:", session.role);
+    session = await requireAuth();
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    const status = msg === "Unauthorized" ? 401 : 403;
-    console.error("[SMS SEND BULK] auth failed", {
-      route: "POST /api/sms/send-bulk",
-      error: msg,
-    });
+    const status = authErrorStatus(err);
     return NextResponse.json({ error: status === 401 ? "Unauthorized" : "Forbidden" }, { status });
   }
-
 
   try {
     const body = (await req.json()) as Body;
@@ -58,6 +45,13 @@ export async function POST(req: NextRequest) {
 
     if (!reminderType || !Array.isArray(recipients) || recipients.length === 0) {
       return NextResponse.json({ error: "reminderType and recipients are required." }, { status: 400 });
+    }
+
+    if (!canSendReminderType(session.role, reminderType)) {
+      return NextResponse.json(
+        { error: `Your role is not permitted to send ${reminderType} reminders.` },
+        { status: 403 }
+      );
     }
 
     // Send sequentially to keep Arkesel load manageable; can be optimized later.

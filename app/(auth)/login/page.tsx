@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { homeFor } from "@/lib/rbac";
 
 function MedicalIcon() {
   return (
@@ -106,25 +107,37 @@ export default function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
     setError("");
 
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-
-    const data = await res.json();
-    setLoading(false);
-
-    if (!res.ok) {
-      setError(data.error ?? "Invalid credentials. Please try again.");
+    if (!form.username.trim() || !form.password) {
+      setError("Please enter both your username and password.");
       return;
     }
 
-    router.push("/dashboard");
-    router.refresh();
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error ?? "Invalid credentials. Please try again.");
+        return;
+      }
+
+      // Redirect to the dashboard that matches the authenticated user's role.
+      router.push(homeFor(data.role));
+      router.refresh();
+    } catch {
+      setError("Unable to reach the server. Please check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

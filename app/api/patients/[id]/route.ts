@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requirePermission, authErrorStatus } from "@/lib/auth";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth();
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    await requirePermission("patients.read");
+  } catch (err) {
+    const status = authErrorStatus(err);
+    return NextResponse.json({ error: status === 401 ? "Unauthorized" : "Forbidden" }, { status });
   }
 
   const { id } = await params;
@@ -23,9 +24,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth(["ADMIN", "RECEPTIONIST"]);
-  } catch {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    await requirePermission("patients.update");
+  } catch (err) {
+    const status = authErrorStatus(err);
+    return NextResponse.json({ error: status === 401 ? "Unauthorized" : "Forbidden" }, { status });
   }
 
   const { id } = await params;
@@ -51,9 +53,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth(["ADMIN"]);
-  } catch {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    await requirePermission("patients.delete");
+  } catch (err) {
+    const status = authErrorStatus(err);
+    return NextResponse.json({ error: status === 401 ? "Unauthorized" : "Forbidden" }, { status });
   }
 
   const { id } = await params;

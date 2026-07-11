@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requirePermission, authErrorStatus } from "@/lib/auth";
+import { ROLES } from "@/lib/rbac";
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAuth(["ADMIN"]);
-  } catch {
-    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+    await requirePermission("users.manage");
+  } catch (err) {
+    const status = authErrorStatus(err);
+    return NextResponse.json({ error: status === 401 ? "Unauthorized" : "Forbidden." }, { status });
   }
 
   try {
@@ -24,6 +26,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "All fields are required." }, { status: 400 });
     }
 
+    const normalizedRole = role.trim().toUpperCase();
+    if (!(ROLES as readonly string[]).includes(normalizedRole)) {
+      return NextResponse.json(
+        { error: `Invalid role. Must be one of: ${ROLES.join(", ")}.` },
+        { status: 400 }
+      );
+    }
+
     const existing = await prisma.user.findFirst({
       where: { OR: [{ username }, { email }] },
     });
@@ -33,7 +43,7 @@ export async function POST(req: NextRequest) {
 
     const hashed = await bcrypt.hash(password, 12);
     const user = await prisma.user.create({
-      data: { username, email, password: hashed, role: role.toUpperCase(), name },
+      data: { username, email, password: hashed, role: normalizedRole, name },
       select: { id: true, username: true, email: true, role: true, name: true, createdAt: true },
     });
 

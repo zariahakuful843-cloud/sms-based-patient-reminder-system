@@ -1,27 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requirePermission, authErrorStatus } from "@/lib/auth";
 import { sendSMS } from "@/lib/sms";
 
 export async function POST(_req: NextRequest) {
-  console.log("[SMS ENDPOINT] endpoint called:", "POST /api/sms/scheduled/send-due");
-
   try {
-    const session = await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
-    console.log("[SMS SEND DUE] current user:", {
-      userId: session.userId,
-      username: session.username,
-      role: session.role,
-      name: session.name,
-    });
-    console.log("[SMS SEND DUE] detected role:", session.role);
+    await requirePermission("sms.manage");
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    const status = msg === "Unauthorized" ? 401 : 403;
-    console.error("[SMS SEND DUE] auth failed", {
-      route: "POST /api/sms/scheduled/send-due",
-      error: msg,
-    });
+    const status = authErrorStatus(err);
     return NextResponse.json({ error: status === 401 ? "Unauthorized" : "Forbidden" }, { status });
   }
 

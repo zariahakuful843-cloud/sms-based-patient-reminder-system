@@ -1,32 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requirePermission, requireAuth, authErrorStatus } from "@/lib/auth";
+import { canSendReminderType } from "@/lib/rbac";
 import type { ReminderType } from "@/lib/sms";
 
 export async function GET(req: NextRequest) {
-  console.log("[SMS ENDPOINT] endpoint called:", "GET /api/sms/scheduled");
   try {
-    const session = await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
-    console.log("[SMS SCHEDULED LIST] current user:", {
-      userId: session.userId,
-      username: session.username,
-      role: session.role,
-      name: session.name,
-    });
-    console.log("[SMS SCHEDULED LIST] detected role:", session.role);
+    await requirePermission("sms.history.read");
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    const status = msg === "Unauthorized" ? 401 : 403;
-    console.error("[SMS SCHEDULED LIST] auth failed", {
-      route: "GET /api/sms/scheduled",
-      error: msg,
-    });
+    const status = authErrorStatus(err);
     return NextResponse.json({ error: status === 401 ? "Unauthorized" : "Forbidden" }, { status });
   }
-
-
-
-
 
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status") ?? "";
@@ -59,39 +43,17 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  console.log("[SMS ENDPOINT] endpoint called:", "POST /api/sms/scheduled");
+  let session;
   try {
-    const session = await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
-    console.log("[SMS SCHEDULED CREATE] current user:", {
-      userId: session.userId,
-      username: session.username,
-      role: session.role,
-      name: session.name,
-    });
-    console.log("[SMS SCHEDULED CREATE] detected role:", session.role);
+    session = await requireAuth();
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    const status = msg === "Unauthorized" ? 401 : 403;
-    console.error("[SMS SCHEDULED CREATE] auth failed", {
-      route: "POST /api/sms/scheduled",
-      error: msg,
-    });
+    const status = authErrorStatus(err);
     return NextResponse.json({ error: status === 401 ? "Unauthorized" : "Forbidden" }, { status });
   }
 
-
-
-
-
   try {
     const body = await req.json();
-    const {
-      patientId,
-      reminderType,
-      message,
-      phoneNumber,
-      scheduledAt,
-    } = body as {
+    const { patientId, reminderType, message, phoneNumber, scheduledAt } = body as {
       patientId: number;
       reminderType: ReminderType;
       message: string;
@@ -100,7 +62,18 @@ export async function POST(req: NextRequest) {
     };
 
     if (!patientId || !reminderType || !message || !scheduledAt) {
-      return NextResponse.json({ error: "patientId, reminderType, message, and scheduledAt are required." }, { status: 400 });
+      return NextResponse.json(
+        { error: "patientId, reminderType, message, and scheduledAt are required." },
+        { status: 400 }
+      );
+    }
+
+    // Enforce that the caller's role is allowed to create this reminder type.
+    if (!canSendReminderType(session.role, reminderType)) {
+      return NextResponse.json(
+        { error: `Your role is not permitted to create ${reminderType} reminders.` },
+        { status: 403 }
+      );
     }
 
     const patient = await prisma.patient.findUnique({ where: { id: patientId } });
@@ -123,4 +96,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Server error." }, { status: 500 });
   }
 }
-
