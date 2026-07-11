@@ -84,31 +84,47 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      const pending = await prisma.sMSLog.create({
-        data: {
+      try {
+        const pending = await prisma.sMSLog.create({
+          data: {
+            patientId: r.patientId,
+            patientName: r.patientName,
+            phoneNumber: r.phoneNumber,
+            reminderType,
+            message,
+            status: "PENDING",
+          },
+        });
+
+        const smsResult = await sendSMS({ to: r.phoneNumber, message });
+
+        const updated = await prisma.sMSLog.update({
+          where: { id: pending.id },
+          data: {
+            status: smsResult.status === "FAILED" ? "FAILED" : "SENT",
+          },
+        });
+
+        results.push({ recipient: r, smsResult, logId: updated.id });
+      } catch (err) {
+        // Keep processing the rest of the batch even if one recipient fails.
+        console.error("[SMS SEND BULK] failed to process recipient", {
           patientId: r.patientId,
-          patientName: r.patientName,
-          phoneNumber: r.phoneNumber,
-          reminderType,
-          message,
-          status: "PENDING",
-        },
-      });
-
-      const smsResult = await sendSMS({ to: r.phoneNumber, message });
-
-      const updated = await prisma.sMSLog.update({
-        where: { id: pending.id },
-        data: {
-          status: smsResult.status === "FAILED" ? "FAILED" : "SENT",
-        },
-      });
-
-      results.push({ recipient: r, smsResult, logId: updated.id });
+          error: err,
+        });
+        results.push({
+          recipient: r,
+          smsResult: {
+            success: false,
+            error: err instanceof Error ? err.message : "Unknown error",
+          },
+        });
+      }
     }
 
     return NextResponse.json({ results }, { status: 201 });
-  } catch {
+  } catch (err) {
+    console.error("[SMS SEND BULK] failed", err);
     return NextResponse.json({ error: "Server error." }, { status: 500 });
   }
 }

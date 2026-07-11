@@ -39,10 +39,7 @@ export async function POST(req: NextRequest) {
     });
     return response;
   } catch (error) {
-    console.error("LOGIN ERROR:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
-    return NextResponse.json(
-      { error: "Server error.", message: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
-    );
+    console.error("[AUTH] login failed", error);
+    return NextResponse.json({ error: "Server error." }, { status: 500 });
   }
 }

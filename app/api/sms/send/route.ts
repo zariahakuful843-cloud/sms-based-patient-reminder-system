@@ -48,7 +48,8 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ ...log, smsResult: result }, { status: 201 });
-  } catch {
+  } catch (err) {
+    console.error("[SMS SEND] failed", err);
     return NextResponse.json({ error: "Server error." }, { status: 500 });
   }
 }

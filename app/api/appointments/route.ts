@@ -73,7 +73,8 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(appointment, { status: 201 });
-  } catch {
+  } catch (err) {
+    console.error("[APPOINTMENTS] create failed", err);
     return NextResponse.json({ error: "Server error." }, { status: 500 });
   }
 }

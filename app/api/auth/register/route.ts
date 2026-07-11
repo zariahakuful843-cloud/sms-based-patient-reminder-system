@@ -38,7 +38,8 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(user, { status: 201 });
-  } catch {
+  } catch (err) {
+    console.error("[AUTH] register failed", err);
     return NextResponse.json({ error: "Server error." }, { status: 500 });
   }
 }

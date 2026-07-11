@@ -66,7 +66,8 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(patient, { status: 201 });
-  } catch {
+  } catch (err) {
+    console.error("[PATIENTS] create failed", err);
     return NextResponse.json({ error: "Server error." }, { status: 500 });
   }
 }
