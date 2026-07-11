@@ -1,39 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { guard } from "@/lib/api/guard";
+import { jsonError } from "@/lib/api/response";
+import { getPagination } from "@/lib/api/pagination";
 import type { ReminderType } from "@/lib/sms";
+
+const STAFF_ROLES = ["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"];
 
 export async function GET(req: NextRequest) {
   console.log("[SMS ENDPOINT] endpoint called:", "GET /api/sms/scheduled");
-  try {
-    const session = await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
-    console.log("[SMS SCHEDULED LIST] current user:", {
-      userId: session.userId,
-      username: session.username,
-      role: session.role,
-      name: session.name,
-    });
-    console.log("[SMS SCHEDULED LIST] detected role:", session.role);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    const status = msg === "Unauthorized" ? 401 : 403;
-    console.error("[SMS SCHEDULED LIST] auth failed", {
-      route: "GET /api/sms/scheduled",
-      error: msg,
-    });
-    return NextResponse.json({ error: status === 401 ? "Unauthorized" : "Forbidden" }, { status });
-  }
-
-
-
-
+  const auth = await guard(STAFF_ROLES, { label: "SMS SCHEDULED LIST" });
+  if (auth.response) return auth.response;
 
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status") ?? "";
   const search = searchParams.get("search") ?? "";
-  const page = parseInt(searchParams.get("page") ?? "1");
-  const limit = parseInt(searchParams.get("limit") ?? "20");
-  const skip = (page - 1) * limit;
+  const { page, limit, skip } = getPagination(searchParams);
 
   const where: Record<string, unknown> = {};
   if (status) where.status = status;
@@ -60,28 +42,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   console.log("[SMS ENDPOINT] endpoint called:", "POST /api/sms/scheduled");
-  try {
-    const session = await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
-    console.log("[SMS SCHEDULED CREATE] current user:", {
-      userId: session.userId,
-      username: session.username,
-      role: session.role,
-      name: session.name,
-    });
-    console.log("[SMS SCHEDULED CREATE] detected role:", session.role);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    const status = msg === "Unauthorized" ? 401 : 403;
-    console.error("[SMS SCHEDULED CREATE] auth failed", {
-      route: "POST /api/sms/scheduled",
-      error: msg,
-    });
-    return NextResponse.json({ error: status === 401 ? "Unauthorized" : "Forbidden" }, { status });
-  }
-
-
-
-
+  const auth = await guard(STAFF_ROLES, { label: "SMS SCHEDULED CREATE" });
+  if (auth.response) return auth.response;
 
   try {
     const body = await req.json();
@@ -100,11 +62,11 @@ export async function POST(req: NextRequest) {
     };
 
     if (!patientId || !reminderType || !message || !scheduledAt) {
-      return NextResponse.json({ error: "patientId, reminderType, message, and scheduledAt are required." }, { status: 400 });
+      return jsonError("patientId, reminderType, message, and scheduledAt are required.", 400);
     }
 
     const patient = await prisma.patient.findUnique({ where: { id: patientId } });
-    if (!patient) return NextResponse.json({ error: "Patient not found." }, { status: 404 });
+    if (!patient) return jsonError("Patient not found.", 404);
 
     const item = await prisma.scheduledReminder.create({
       data: {
@@ -120,7 +82,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(item, { status: 201 });
   } catch {
-    return NextResponse.json({ error: "Server error." }, { status: 500 });
+    return jsonError("Server error.", 500);
   }
 }
-

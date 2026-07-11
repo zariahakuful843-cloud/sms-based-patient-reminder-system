@@ -1,21 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { guard } from "@/lib/api/guard";
+import { jsonError } from "@/lib/api/response";
 import { sendSMS } from "@/lib/sms";
+import { resolveLogStatus } from "@/lib/sms-log";
 
-
+const STAFF_ROLES = ["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"];
 
 export async function POST(req: NextRequest) {
-  try {
-    await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
-  } catch (err) {
-    console.error("[SMS SEND] forbidden", {
-      route: "POST /api/sms/send",
-      error: err instanceof Error ? err.message : err,
-    });
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
+  const auth = await guard(STAFF_ROLES, { label: "SMS SEND" });
+  if (auth.response) return auth.response;
 
   try {
     const body = await req.json();
@@ -27,11 +21,11 @@ export async function POST(req: NextRequest) {
     };
 
     if (!patientId || !message) {
-      return NextResponse.json({ error: "patientId and message are required." }, { status: 400 });
+      return jsonError("patientId and message are required.", 400);
     }
 
     const patient = await prisma.patient.findUnique({ where: { id: patientId } });
-    if (!patient) return NextResponse.json({ error: "Patient not found." }, { status: 404 });
+    if (!patient) return jsonError("Patient not found.", 404);
 
     const to = phoneNumber ?? patient.phoneNumber;
     const result = await sendSMS({ to, message });
@@ -43,13 +37,12 @@ export async function POST(req: NextRequest) {
         phoneNumber: to,
         reminderType: reminderType ?? "APPOINTMENT_REMINDER",
         message,
-        status: result.status === "FAILED" ? "FAILED" : "SENT",
+        status: resolveLogStatus(result),
       },
     });
 
     return NextResponse.json({ ...log, smsResult: result }, { status: 201 });
   } catch {
-    return NextResponse.json({ error: "Server error." }, { status: 500 });
+    return jsonError("Server error.", 500);
   }
 }
-

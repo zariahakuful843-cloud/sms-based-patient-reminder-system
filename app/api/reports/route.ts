@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { guard } from "@/lib/api/guard";
 
 export async function GET(req: NextRequest) {
-  try {
-    await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
-  } catch {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const auth = await guard(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
+  if (auth.response) return auth.response;
 
   const { searchParams } = new URL(req.url);
   const from = searchParams.get("from");

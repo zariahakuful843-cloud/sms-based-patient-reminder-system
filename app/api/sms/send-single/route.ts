@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
-import { buildReminderMessageByType, sendSMS, type ReminderType } from "@/lib/sms";
+import { guard } from "@/lib/api/guard";
+import { jsonError } from "@/lib/api/response";
+import { buildReminderMessage, type ReminderType } from "@/lib/sms";
+import { sendAndLogSMS } from "@/lib/sms-log";
+
+const STAFF_ROLES = ["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"];
 
 type Body = {
   patientId: number;
@@ -17,30 +21,9 @@ type Body = {
 };
 
 export async function POST(req: NextRequest) {
-  console.log("[SMS ENDPOINT] current user/session:", "(set below)");
-  console.log("[SMS ENDPOINT] detected role:", "(set below)");
   console.log("[SMS ENDPOINT] endpoint called:", "POST /api/sms/send-single");
-
-  try {
-    const session = await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
-    console.log("[SMS SEND SINGLE] current user:", {
-      userId: session.userId,
-      username: session.username,
-      role: session.role,
-      name: session.name,
-    });
-    console.log("[SMS SEND SINGLE] detected role:", session.role);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    const status = msg === "Unauthorized" ? 401 : 403;
-    console.error("[SMS SEND SINGLE] auth failed", {
-      route: "POST /api/sms/send-single",
-      detected: "unknown",
-      error: msg,
-    });
-    return NextResponse.json({ error: status === 401 ? "Unauthorized" : "Forbidden" }, { status });
-  }
-
+  const auth = await guard(STAFF_ROLES, { label: "SMS SEND SINGLE" });
+  if (auth.response) return auth.response;
 
   try {
     const body = (await req.json()) as Body;
@@ -57,52 +40,39 @@ export async function POST(req: NextRequest) {
     } = body;
 
     if (!patientId || !reminderType) {
-      return NextResponse.json({ error: "patientId and reminderType are required." }, { status: 400 });
+      return jsonError("patientId and reminderType are required.", 400);
     }
 
     const patient = await prisma.patient.findUnique({ where: { id: patientId } });
-    if (!patient) return NextResponse.json({ error: "Patient not found." }, { status: 404 });
+    if (!patient) return jsonError("Patient not found.", 404);
 
-    const message = buildReminderMessageByType({
+    const message = buildReminderMessage({
       reminderType,
-      patientName: patient.fullName.split(" ")[0],
-      appointmentDate: appointmentDate ? new Date(appointmentDate) : undefined,
-      vaccinationDate: vaccinationDate ? new Date(vaccinationDate) : undefined,
-      antenatalDate: antenatalDate ? new Date(antenatalDate) : undefined,
-      followUpDate: followUpDate ? new Date(followUpDate) : undefined,
-      laboratoryTestDate: laboratoryTestDate ? new Date(laboratoryTestDate) : undefined,
+      patientName: patient.fullName,
       medicationName,
+      appointmentDate,
+      vaccinationDate,
+      antenatalDate,
+      followUpDate,
+      laboratoryTestDate,
     });
 
     const to = phoneNumber ?? patient.phoneNumber;
 
-    const pending = await prisma.sMSLog.create({
-      data: {
-        patientId,
-        patientName: patient.fullName,
-        phoneNumber: to,
-        reminderType,
-        message,
-        status: "PENDING",
-      },
+    const { log, smsResult } = await sendAndLogSMS({
+      patientId,
+      patientName: patient.fullName,
+      phoneNumber: to,
+      reminderType,
+      message,
     });
 
-    const result = await sendSMS({ to, message, senderId: undefined });
-
-    if (result.status === "FAILED") {
-      console.warn("[SMS SEND SINGLE] Failed to send SMS to", to, "Error:", result.error);
+    if (smsResult.status === "FAILED") {
+      console.warn("[SMS SEND SINGLE] Failed to send SMS to", to, "Error:", smsResult.error);
     }
 
-    const log = await prisma.sMSLog.update({
-      where: { id: pending.id },
-      data: {
-        status: result.status === "FAILED" ? "FAILED" : "SENT",
-      },
-    });
-
-    return NextResponse.json({ ...log, smsResult: result }, { status: 201 });
+    return NextResponse.json({ ...log, smsResult }, { status: 201 });
   } catch {
-    return NextResponse.json({ error: "Server error." }, { status: 500 });
+    return jsonError("Server error.", 500);
   }
 }
-
