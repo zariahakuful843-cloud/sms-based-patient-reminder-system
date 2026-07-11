@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
-import { buildReminderMessageByType, sendSMS, type ReminderType } from "@/lib/sms";
+import { guard } from "@/lib/api/guard";
+import { jsonError } from "@/lib/api/response";
+import { buildReminderMessage, type ReminderType } from "@/lib/sms";
+import { sendAndLogSMS } from "@/lib/sms-log";
+
+const STAFF_ROLES = ["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"];
 
 type Recipient = {
   phoneNumber: string;
@@ -22,26 +25,8 @@ type Body = {
 
 export async function POST(req: NextRequest) {
   console.log("[SMS ENDPOINT] endpoint called:", "POST /api/sms/send-bulk");
-
-  try {
-    const session = await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
-    console.log("[SMS SEND BULK] current user:", {
-      userId: session.userId,
-      username: session.username,
-      role: session.role,
-      name: session.name,
-    });
-    console.log("[SMS SEND BULK] detected role:", session.role);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    const status = msg === "Unauthorized" ? 401 : 403;
-    console.error("[SMS SEND BULK] auth failed", {
-      route: "POST /api/sms/send-bulk",
-      error: msg,
-    });
-    return NextResponse.json({ error: status === 401 ? "Unauthorized" : "Forbidden" }, { status });
-  }
-
+  const auth = await guard(STAFF_ROLES, { label: "SMS SEND BULK" });
+  if (auth.response) return auth.response;
 
   try {
     const body = (await req.json()) as Body;
@@ -57,7 +42,7 @@ export async function POST(req: NextRequest) {
     } = body;
 
     if (!reminderType || !Array.isArray(recipients) || recipients.length === 0) {
-      return NextResponse.json({ error: "reminderType and recipients are required." }, { status: 400 });
+      return jsonError("reminderType and recipients are required.", 400);
     }
 
     // Send sequentially to keep Arkesel load manageable; can be optimized later.
@@ -66,15 +51,15 @@ export async function POST(req: NextRequest) {
     for (const r of recipients) {
       if (!r.phoneNumber || !r.patientName) continue;
 
-      const message = buildReminderMessageByType({
+      const message = buildReminderMessage({
         reminderType,
-        patientName: r.patientName.split(" ")[0],
-        appointmentDate: appointmentDate ? new Date(appointmentDate) : undefined,
-        vaccinationDate: vaccinationDate ? new Date(vaccinationDate) : undefined,
-        antenatalDate: antenatalDate ? new Date(antenatalDate) : undefined,
-        followUpDate: followUpDate ? new Date(followUpDate) : undefined,
-        laboratoryTestDate: laboratoryTestDate ? new Date(laboratoryTestDate) : undefined,
+        patientName: r.patientName,
         medicationName,
+        appointmentDate,
+        vaccinationDate,
+        antenatalDate,
+        followUpDate,
+        laboratoryTestDate,
       });
 
       // If patientId missing, we still store a log by creating a temporary linkage is not possible.
@@ -84,32 +69,19 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      const pending = await prisma.sMSLog.create({
-        data: {
-          patientId: r.patientId,
-          patientName: r.patientName,
-          phoneNumber: r.phoneNumber,
-          reminderType,
-          message,
-          status: "PENDING",
-        },
+      const { log, smsResult } = await sendAndLogSMS({
+        patientId: r.patientId,
+        patientName: r.patientName,
+        phoneNumber: r.phoneNumber,
+        reminderType,
+        message,
       });
 
-      const smsResult = await sendSMS({ to: r.phoneNumber, message });
-
-      const updated = await prisma.sMSLog.update({
-        where: { id: pending.id },
-        data: {
-          status: smsResult.status === "FAILED" ? "FAILED" : "SENT",
-        },
-      });
-
-      results.push({ recipient: r, smsResult, logId: updated.id });
+      results.push({ recipient: r, smsResult, logId: log.id });
     }
 
     return NextResponse.json({ results }, { status: 201 });
   } catch {
-    return NextResponse.json({ error: "Server error." }, { status: 500 });
+    return jsonError("Server error.", 500);
   }
 }
-

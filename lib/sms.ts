@@ -101,6 +101,35 @@ function formatTime(date: Date) {
   });
 }
 
+/**
+ * Convenience wrapper over {@link buildReminderMessageByType} that accepts raw
+ * date strings (as received from request bodies), converts them to `Date`, and
+ * greets the patient by their first name. Centralizes the date-parsing and
+ * name-splitting previously duplicated across the SMS send routes.
+ */
+export function buildReminderMessage(params: {
+  reminderType: ReminderType;
+  patientName: string;
+  medicationName?: string;
+  appointmentDate?: string | Date | null;
+  vaccinationDate?: string | Date | null;
+  antenatalDate?: string | Date | null;
+  followUpDate?: string | Date | null;
+  laboratoryTestDate?: string | Date | null;
+}): string {
+  const toDate = (d?: string | Date | null) => (d ? new Date(d) : undefined);
+  return buildReminderMessageByType({
+    reminderType: params.reminderType,
+    patientName: params.patientName.split(" ")[0],
+    medicationName: params.medicationName,
+    appointmentDate: toDate(params.appointmentDate),
+    vaccinationDate: toDate(params.vaccinationDate),
+    antenatalDate: toDate(params.antenatalDate),
+    followUpDate: toDate(params.followUpDate),
+    laboratoryTestDate: toDate(params.laboratoryTestDate),
+  });
+}
+
 export function buildReminderMessageByType(params: {
   reminderType: ReminderType;
   patientName: string;

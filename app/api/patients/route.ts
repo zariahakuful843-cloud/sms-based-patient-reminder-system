@@ -1,19 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { guard } from "@/lib/api/guard";
+import { jsonError } from "@/lib/api/response";
+import { getPagination } from "@/lib/api/pagination";
 
 export async function GET(req: NextRequest) {
-  try {
-    await requireAuth();
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await guard();
+  if (auth.response) return auth.response;
 
   const { searchParams } = new URL(req.url);
   const search = searchParams.get("search") ?? "";
-  const page = parseInt(searchParams.get("page") ?? "1");
-  const limit = parseInt(searchParams.get("limit") ?? "20");
-  const skip = (page - 1) * limit;
+  const { page, limit, skip } = getPagination(searchParams);
 
   const where = search
     ? {
@@ -41,18 +38,15 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  try {
-    await requireAuth(["ADMIN", "RECEPTIONIST"]);
-  } catch {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const auth = await guard(["ADMIN", "RECEPTIONIST"]);
+  if (auth.response) return auth.response;
 
   try {
     const body = await req.json();
     const { fullName, gender, phoneNumber, address, dateOfBirth } = body;
 
     if (!fullName || !gender || !phoneNumber || !address || !dateOfBirth) {
-      return NextResponse.json({ error: "All fields are required." }, { status: 400 });
+      return jsonError("All fields are required.", 400);
     }
 
     const patient = await prisma.patient.create({
@@ -67,6 +61,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(patient, { status: 201 });
   } catch {
-    return NextResponse.json({ error: "Server error." }, { status: 500 });
+    return jsonError("Server error.", 500);
   }
 }

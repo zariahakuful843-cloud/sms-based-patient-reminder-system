@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { guard } from "@/lib/api/guard";
+import { jsonError } from "@/lib/api/response";
 
 export async function POST(req: NextRequest) {
-  try {
-    await requireAuth(["ADMIN"]);
-  } catch {
-    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
-  }
+  const auth = await guard(["ADMIN"]);
+  if (auth.response) return auth.response;
 
   try {
     const body = await req.json();
@@ -21,14 +19,14 @@ export async function POST(req: NextRequest) {
     };
 
     if (!username || !email || !password || !role || !name) {
-      return NextResponse.json({ error: "All fields are required." }, { status: 400 });
+      return jsonError("All fields are required.", 400);
     }
 
     const existing = await prisma.user.findFirst({
       where: { OR: [{ username }, { email }] },
     });
     if (existing) {
-      return NextResponse.json({ error: "Username or email already exists." }, { status: 409 });
+      return jsonError("Username or email already exists.", 409);
     }
 
     const hashed = await bcrypt.hash(password, 12);
@@ -39,6 +37,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(user, { status: 201 });
   } catch {
-    return NextResponse.json({ error: "Server error." }, { status: 500 });
+    return jsonError("Server error.", 500);
   }
 }

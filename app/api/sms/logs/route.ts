@@ -1,20 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { guard } from "@/lib/api/guard";
+import { getPagination } from "@/lib/api/pagination";
 
 export async function GET(req: NextRequest) {
-  try {
-    await requireAuth();
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await guard();
+  if (auth.response) return auth.response;
 
   const { searchParams } = new URL(req.url);
   const search = searchParams.get("search") ?? "";
   const status = searchParams.get("status") ?? "";
-  const page = parseInt(searchParams.get("page") ?? "1");
-  const limit = parseInt(searchParams.get("limit") ?? "20");
-  const skip = (page - 1) * limit;
+  const { page, limit, skip } = getPagination(searchParams);
 
   const where: Record<string, unknown> = {};
   if (status) where.status = status;
@@ -38,4 +34,3 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({ logs, total, page, limit });
 }
-

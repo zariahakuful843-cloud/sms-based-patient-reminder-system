@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { guard } from "@/lib/api/guard";
+import { jsonError } from "@/lib/api/response";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    await requireAuth();
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await guard();
+  if (auth.response) return auth.response;
 
   const { id } = await params;
   const patient = await prisma.patient.findUnique({
@@ -17,16 +15,13 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       smsLogs: { orderBy: { sentAt: "desc" }, take: 10 },
     },
   });
-  if (!patient) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!patient) return jsonError("Not found", 404);
   return NextResponse.json(patient);
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    await requireAuth(["ADMIN", "RECEPTIONIST"]);
-  } catch {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const auth = await guard(["ADMIN", "RECEPTIONIST"]);
+  if (auth.response) return auth.response;
 
   const { id } = await params;
   const body = await req.json();
@@ -45,22 +40,19 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     });
     return NextResponse.json(patient);
   } catch {
-    return NextResponse.json({ error: "Not found or server error." }, { status: 404 });
+    return jsonError("Not found or server error.", 404);
   }
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    await requireAuth(["ADMIN"]);
-  } catch {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const auth = await guard(["ADMIN"]);
+  if (auth.response) return auth.response;
 
   const { id } = await params;
   try {
     await prisma.patient.delete({ where: { id: parseInt(id) } });
     return NextResponse.json({ success: true });
   } catch {
-    return NextResponse.json({ error: "Not found." }, { status: 404 });
+    return jsonError("Not found.", 404);
   }
 }
