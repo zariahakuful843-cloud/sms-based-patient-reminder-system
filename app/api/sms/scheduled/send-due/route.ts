@@ -37,35 +37,65 @@ export async function POST(_req: NextRequest) {
       orderBy: { scheduledAt: "asc" },
     });
 
-    const results: Array<{ id: number; phoneNumber: string; status: string }> = [];
+    const results: Array<{
+      id: number;
+      phoneNumber: string;
+      status: string;
+      error?: string;
+    }> = [];
 
     for (const item of due) {
-      const smsResult = await sendSMS({ to: item.phoneNumber, message: item.message });
+      try {
+        const smsResult = await sendSMS({ to: item.phoneNumber, message: item.message });
 
-      const updated = await prisma.scheduledReminder.update({
-        where: { id: item.id },
-        data: {
-          status: smsResult.status === "FAILED" ? "FAILED" : "SENT",
-          sentAt: new Date(),
-        },
-      });
+        const updated = await prisma.scheduledReminder.update({
+          where: { id: item.id },
+          data: {
+            status: smsResult.status === "FAILED" ? "FAILED" : "SENT",
+            sentAt: new Date(),
+          },
+        });
 
-      await prisma.sMSLog.create({
-        data: {
-          patientId: item.patientId,
-          patientName: item.patientName,
+        await prisma.sMSLog.create({
+          data: {
+            patientId: item.patientId,
+            patientName: item.patientName,
+            phoneNumber: item.phoneNumber,
+            reminderType: item.reminderType,
+            message: item.message,
+            status: updated.status,
+          },
+        });
+
+        results.push({
+          id: item.id,
           phoneNumber: item.phoneNumber,
-          reminderType: item.reminderType,
-          message: item.message,
           status: updated.status,
-        },
-      });
-
-      results.push({ id: item.id, phoneNumber: item.phoneNumber, status: updated.status });
+          ...(smsResult.error ? { error: smsResult.error } : {}),
+        });
+      } catch (err) {
+        // Don't let one failing reminder abort the whole batch; record it and
+        // continue so the remaining due reminders are still processed.
+        console.error("[SMS SEND DUE] failed to process reminder", {
+          id: item.id,
+          error: err,
+        });
+        results.push({
+          id: item.id,
+          phoneNumber: item.phoneNumber,
+          status: "FAILED",
+          error: err instanceof Error ? err.message : "Unknown error",
+        });
+      }
     }
 
-    return NextResponse.json({ processed: results.length, results }, { status: 200 });
-  } catch {
+    const failed = results.filter((r) => r.status === "FAILED").length;
+    return NextResponse.json(
+      { processed: results.length, failed, results },
+      { status: 200 }
+    );
+  } catch (err) {
+    console.error("[SMS SEND DUE] failed", err);
     return NextResponse.json({ error: "Server error." }, { status: 500 });
   }
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, isRecordNotFoundError } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -41,8 +41,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       include: { patient: true },
     });
     return NextResponse.json(appt);
-  } catch {
-    return NextResponse.json({ error: "Not found or server error." }, { status: 404 });
+  } catch (err) {
+    if (isRecordNotFoundError(err)) {
+      return NextResponse.json({ error: "Not found." }, { status: 404 });
+    }
+    console.error("[APPOINTMENTS] update failed", { id, error: err });
+    return NextResponse.json({ error: "Server error." }, { status: 500 });
   }
 }
 
@@ -57,7 +61,11 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   try {
     await prisma.appointment.delete({ where: { id: parseInt(id) } });
     return NextResponse.json({ success: true });
-  } catch {
-    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  } catch (err) {
+    if (isRecordNotFoundError(err)) {
+      return NextResponse.json({ error: "Not found." }, { status: 404 });
+    }
+    console.error("[APPOINTMENTS] delete failed", { id, error: err });
+    return NextResponse.json({ error: "Server error." }, { status: 500 });
   }
 }

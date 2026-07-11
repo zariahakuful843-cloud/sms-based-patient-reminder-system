@@ -67,7 +67,25 @@ export async function sendSMS(payload: SMSPayload): Promise<SMSResult> {
       }),
     });
 
-    const data = await res.json();
+    // The API is expected to return JSON, but on gateway/5xx errors it may
+    // return HTML or an empty body. Parse defensively so a bad payload is
+    // reported as a real SMS failure instead of being mislabelled a network
+    // error by the catch block below.
+    const raw = await res.text();
+    let data: { status?: string; message?: string; data?: Array<{ id?: string }> } = {};
+    try {
+      data = raw ? JSON.parse(raw) : {};
+    } catch {
+      console.error("[SMS ERROR] Arkesel returned a non-JSON response:", {
+        httpStatus: res.status,
+        body: raw.slice(0, 500),
+      });
+      return {
+        success: false,
+        error: `Unexpected response from SMS provider (HTTP ${res.status}).`,
+        status: "FAILED",
+      };
+    }
 
     if (res.ok && data.status === "success") {
       return { success: true, messageId: data.data?.[0]?.id, status: "SENT" };

@@ -65,7 +65,8 @@ export async function POST(req: NextRequest) {
 
     const smsResult = await sendSMS({ to: phoneNumber, message });
     return NextResponse.json({ smsResult }, { status: 201 });
-  } catch {
+  } catch (err) {
+    console.error("[SMS TEST] failed", err);
     return NextResponse.json({ error: "Server error." }, { status: 500 });
   }
 }
