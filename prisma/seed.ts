@@ -3,13 +3,38 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
+const DEPARTMENTS: { name: string; code: string; description: string }[] = [
+  { name: "General OPD", code: "OPD", description: "General outpatient department" },
+  { name: "Emergency", code: "EMG", description: "Emergency and casualty" },
+  { name: "Pediatrics", code: "PED", description: "Child and infant care" },
+  { name: "Maternity", code: "MAT", description: "Maternity and delivery" },
+  { name: "Antenatal Clinic", code: "ANC", description: "Antenatal and prenatal care" },
+  { name: "Laboratory", code: "LAB", description: "Diagnostic laboratory services" },
+  { name: "Pharmacy", code: "PHM", description: "Pharmacy and dispensing" },
+  { name: "Surgical", code: "SUR", description: "Surgical services" },
+  { name: "Medical Ward", code: "MED", description: "Inpatient medical ward" },
+];
+
 async function main() {
   console.log("Seeding database…");
+
+  // Departments
+  const departments: Record<string, { id: number }> = {};
+  for (const d of DEPARTMENTS) {
+    const dept = await prisma.department.upsert({
+      where: { code: d.code },
+      update: { name: d.name, description: d.description, active: true },
+      create: { name: d.name, code: d.code, description: d.description },
+    });
+    departments[d.code] = dept;
+  }
+  console.log(`Created ${DEPARTMENTS.length} departments`);
 
   // Users
   const adminPw = await bcrypt.hash("admin123", 12);
   const receptionistPw = await bcrypt.hash("recept123", 12);
   const doctorPw = await bcrypt.hash("doctor123", 12);
+  const nursePw = await bcrypt.hash("nurse123", 12);
 
   const admin = await prisma.user.upsert({
     where: { username: "admin" },
@@ -37,17 +62,33 @@ async function main() {
 
   const doctor = await prisma.user.upsert({
     where: { username: "doctor" },
-    update: {},
+    update: { departmentId: departments.OPD.id },
     create: {
       username: "doctor",
       email: "doctor@ridgehospital.gh",
       password: doctorPw,
       role: "DOCTOR",
       name: "Dr. Kofi Boateng",
+      departmentId: departments.OPD.id,
     },
   });
 
-  console.log(`Created users: ${admin.username}, ${receptionist.username}, ${doctor.username}`);
+  const nurse = await prisma.user.upsert({
+    where: { username: "nurse" },
+    update: { departmentId: departments.PED.id },
+    create: {
+      username: "nurse",
+      email: "nurse@ridgehospital.gh",
+      password: nursePw,
+      role: "NURSE",
+      name: "Efua Sarpong",
+      departmentId: departments.PED.id,
+    },
+  });
+
+  console.log(
+    `Created users: ${admin.username}, ${receptionist.username}, ${doctor.username}, ${nurse.username}`
+  );
 
   // Patients
   const patients = await Promise.all([
@@ -141,64 +182,120 @@ async function main() {
   twodays.setDate(twodays.getDate() + 2);
   twodays.setHours(15, 0, 0, 0);
 
+  // Today's appointments drive the queue and dashboards.
+  const t = (h: number, m: number) => {
+    const d = new Date(now);
+    d.setHours(h, m, 0, 0);
+    return d;
+  };
+
+  const opd = departments.OPD.id;
+  const ped = departments.PED.id;
+  const anc = departments.ANC.id;
+
   const appointments = await Promise.all([
+    // Today — General OPD (doctor's department)
     prisma.appointment.create({
       data: {
         patientId: patients[0].id,
-        doctorName: "Dr. Kofi Boateng",
-        appointmentDate: tomorrow,
+        doctorId: doctor.id,
+        doctorName: doctor.name,
+        departmentId: opd,
+        appointmentDate: t(9, 0),
+        appointmentType: "Consultation",
         status: "SCHEDULED",
-        reminderSent: false,
-      },
-    }),
-    prisma.appointment.create({
-      data: {
-        patientId: patients[1].id,
-        doctorName: "Dr. Mensah",
-        appointmentDate: nextWeek,
-        status: "SCHEDULED",
-        reminderSent: false,
-      },
-    }),
-    prisma.appointment.create({
-      data: {
-        patientId: patients[2].id,
-        doctorName: "Dr. Kofi Boateng",
-        appointmentDate: yesterday,
-        status: "COMPLETED",
+        queueStatus: "WAITING",
+        queueNumber: 1,
         reminderSent: true,
       },
     }),
-    prisma.appointment.create({
-      data: {
-        patientId: patients[3].id,
-        doctorName: "Dr. Asare",
-        appointmentDate: lastWeek,
-        status: "MISSED",
-        reminderSent: true,
-        notes: "Patient did not show up. Follow up required.",
-      },
-    }),
+    // Today — OPD, unassigned doctor (doctor can claim)
     prisma.appointment.create({
       data: {
         patientId: patients[4].id,
-        doctorName: "Dr. Mensah",
-        appointmentDate: twodays,
+        departmentId: opd,
+        appointmentDate: t(9, 30),
+        appointmentType: "Consultation",
         status: "SCHEDULED",
+        queueStatus: "VITALS_COMPLETED",
+        queueNumber: 2,
+        reminderSent: false,
+      },
+    }),
+    // Today — Pediatrics (nurse's department)
+    prisma.appointment.create({
+      data: {
+        patientId: patients[3].id,
+        departmentId: ped,
+        appointmentDate: t(10, 0),
+        appointmentType: "Review",
+        status: "SCHEDULED",
+        queueStatus: "WAITING",
+        queueNumber: 3,
         reminderSent: false,
       },
     }),
     prisma.appointment.create({
       data: {
         patientId: patients[5].id,
-        doctorName: "Dr. Kofi Boateng",
-        appointmentDate: lastWeek,
-        status: "COMPLETED",
+        departmentId: ped,
+        appointmentDate: t(10, 30),
+        appointmentType: "Vaccination",
+        status: "SCHEDULED",
+        queueStatus: "WAITING_FOR_DOCTOR",
+        queueNumber: 4,
         reminderSent: true,
+      },
+    }),
+    // Future — booked into department, doctor optional
+    prisma.appointment.create({
+      data: {
+        patientId: patients[1].id,
+        departmentId: anc,
+        appointmentDate: nextWeek,
+        appointmentType: "Antenatal",
+        status: "SCHEDULED",
+        reminderSent: false,
+      },
+    }),
+    prisma.appointment.create({
+      data: {
+        patientId: patients[0].id,
+        doctorId: doctor.id,
+        doctorName: doctor.name,
+        departmentId: opd,
+        appointmentDate: tomorrow,
+        appointmentType: "Follow-up",
+        status: "SCHEDULED",
+        reminderSent: false,
+      },
+    }),
+    // Past
+    prisma.appointment.create({
+      data: {
+        patientId: patients[2].id,
+        doctorId: doctor.id,
+        doctorName: doctor.name,
+        departmentId: opd,
+        appointmentDate: yesterday,
+        status: "COMPLETED",
+        queueStatus: "CONSULTATION_COMPLETED",
+        reminderSent: true,
+      },
+    }),
+    prisma.appointment.create({
+      data: {
+        patientId: patients[3].id,
+        departmentId: anc,
+        appointmentDate: lastWeek,
+        status: "MISSED",
+        reminderSent: true,
+        notes: "Patient did not show up. Follow up required.",
       },
     }),
   ]);
 
+  void twodays;
   console.log(`Created ${appointments.length} appointments`);
 
   // SMS Logs

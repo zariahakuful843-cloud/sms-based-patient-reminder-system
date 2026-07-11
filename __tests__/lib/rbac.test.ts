@@ -143,6 +143,7 @@ describe("homeFor", () => {
 describe("requiredPermissionForPath", () => {
   it("maps protected areas to permissions", () => {
     expect(requiredPermissionForPath("/users")).toBe("users.manage");
+    expect(requiredPermissionForPath("/departments")).toBe("departments.manage");
     expect(requiredPermissionForPath("/settings")).toBe("settings.manage");
     expect(requiredPermissionForPath("/reports")).toBe("reports.view");
     expect(requiredPermissionForPath("/admin")).toBe("users.manage");
@@ -151,8 +152,14 @@ describe("requiredPermissionForPath", () => {
     expect(requiredPermissionForPath("/doctor")).toBe("consultation.manage");
   });
 
+  it("protects the shared clinical module routes", () => {
+    expect(requiredPermissionForPath("/patients")).toBe("patients.read");
+    expect(requiredPermissionForPath("/appointments")).toBe("appointments.read");
+    expect(requiredPermissionForPath("/sms")).toBe("sms.history.read");
+  });
+
   it("returns null for unprotected paths", () => {
-    expect(requiredPermissionForPath("/patients")).toBeNull();
+    expect(requiredPermissionForPath("/profile")).toBeNull();
     expect(requiredPermissionForPath("/")).toBeNull();
   });
 

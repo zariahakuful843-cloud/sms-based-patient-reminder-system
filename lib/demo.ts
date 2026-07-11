@@ -13,11 +13,14 @@ export function isDemoMode(): boolean {
 }
 
 // A fixed set of mock users, one per role, used only in demo mode.
-export const DEMO_USERS: Record<Role, { userId: number; username: string; name: string }> = {
-  ADMIN: { userId: 9001, username: "demo.admin", name: "Demo Admin" },
-  RECEPTIONIST: { userId: 9002, username: "demo.receptionist", name: "Demo Receptionist" },
-  NURSE: { userId: 9003, username: "demo.nurse", name: "Demo Nurse" },
-  DOCTOR: { userId: 9004, username: "demo.doctor", name: "Demo Doctor" },
+export const DEMO_USERS: Record<
+  Role,
+  { userId: number; username: string; name: string; department: string | null }
+> = {
+  ADMIN: { userId: 9001, username: "demo.admin", name: "Demo Admin", department: null },
+  RECEPTIONIST: { userId: 9002, username: "demo.receptionist", name: "Demo Receptionist", department: null },
+  NURSE: { userId: 9003, username: "demo.nurse", name: "Demo Nurse", department: "PED" },
+  DOCTOR: { userId: 9004, username: "demo.doctor", name: "Demo Doctor", department: "OPD" },
 };
 
 export const DEMO_ROLES = ROLES;

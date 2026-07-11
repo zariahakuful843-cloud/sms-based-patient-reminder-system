@@ -11,6 +11,8 @@ export type JWTPayload = {
   username: string;
   role: string;
   name: string;
+  departmentId?: number | null;
+  department?: string | null;
 };
 
 export async function signToken(payload: JWTPayload): Promise<string> {

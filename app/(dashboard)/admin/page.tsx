@@ -1,6 +1,6 @@
-import { prisma } from "@/lib/prisma";
 import { getSession, requireAuth } from "@/lib/auth";
 import { RoleDashboard, type QuickAction } from "@/components/dashboard/RoleDashboard";
+import { DashboardStats } from "@/components/dashboard/DashboardStats";
 
 export const dynamic = "force-dynamic";
 
@@ -30,33 +30,14 @@ const ICONS: Record<string, React.ReactNode> = {
 
 const ACTIONS: QuickAction[] = [
   { label: "Manage Users", description: "Create, edit and remove staff accounts", href: "/users", icon: ICONS.users },
+  { label: "Manage Departments", description: "Create and configure departments", href: "/departments", icon: ICONS.patients },
+  { label: "View Reports", description: "Full facility reports", href: "/reports", icon: ICONS.reports },
   { label: "System Settings", description: "Facility and SMS configuration", href: "/settings", icon: ICONS.settings },
-  { label: "Reports & Analytics", description: "Full facility reports", href: "/reports", icon: ICONS.reports },
-  { label: "Patient Records", description: "Browse all patients", href: "/patients", icon: ICONS.patients },
 ];
 
 export default async function AdminDashboardPage() {
   await requireAuth(["ADMIN"]);
   const session = await getSession();
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  // Fall back to zeros if the database is unavailable (e.g. UI-review preview
-  // deployments that run without a provisioned database).
-  const [totalPatients, totalUsers, smsSentToday, appointments] = await Promise.all([
-    prisma.patient.count().catch(() => 0),
-    prisma.user.count().catch(() => 0),
-    prisma.sMSLog.count({ where: { sentAt: { gte: today } } }).catch(() => 0),
-    prisma.appointment.count().catch(() => 0),
-  ]);
-
-  const stats = [
-    { label: "Total Patients", value: totalPatients, hint: "Registered patients" },
-    { label: "Staff Accounts", value: totalUsers, hint: "System users" },
-    { label: "Appointments", value: appointments, hint: "All-time" },
-    { label: "SMS Sent Today", value: smsSentToday, hint: "Reminders dispatched" },
-  ];
 
   return (
     <RoleDashboard
@@ -66,15 +47,7 @@ export default async function AdminDashboardPage() {
       subtitle="Manage users, settings and view facility-wide analytics."
       actions={ACTIONS}
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {stats.map((s) => (
-          <div key={s.label} className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 p-4 sm:p-5">
-            <p className="text-xs font-semibold text-slate-500">{s.label}</p>
-            <p className="mt-2 text-2xl sm:text-3xl font-bold text-slate-900">{s.value}</p>
-            <p className="mt-1 text-sm text-slate-500">{s.hint}</p>
-          </div>
-        ))}
-      </div>
+      <DashboardStats />
     </RoleDashboard>
   );
 }

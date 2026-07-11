@@ -1,5 +1,6 @@
 import { getSession, requireAuth } from "@/lib/auth";
-import { RoleDashboard, type QuickAction, type UpcomingItem } from "@/components/dashboard/RoleDashboard";
+import { RoleDashboard, type QuickAction } from "@/components/dashboard/RoleDashboard";
+import { DashboardStats } from "@/components/dashboard/DashboardStats";
 
 export const dynamic = "force-dynamic";
 
@@ -22,17 +23,9 @@ const ICONS: Record<string, React.ReactNode> = {
 };
 
 const ACTIONS: QuickAction[] = [
-  { label: "Assigned Patients", description: "View patient records", href: "/patients", icon: ICONS.patients },
-  { label: "Appointments", description: "View today's schedule", href: "/appointments", icon: ICONS.calendar },
-  { label: "Medication Reminders", description: "Send medication SMS", href: "/sms", icon: ICONS.sms },
-  { label: "Follow-up Reminders", description: "Send follow-up SMS", href: "/sms", icon: ICONS.sms },
-  { label: "Vaccination Reminders", description: "Send vaccination SMS", href: "/sms", icon: ICONS.sms },
-];
-
-const UPCOMING: UpcomingItem[] = [
-  { label: "Patient Queue", description: "Manage the consultation queue" },
-  { label: "Record Vitals", description: "Blood pressure, temperature, pulse, weight" },
-  { label: "Patient Preparation", description: "Prepare patients before the doctor" },
+  { label: "View Queue", description: "Manage today's patient queue", href: "/appointments", icon: ICONS.calendar },
+  { label: "Record Vitals", description: "Coming soon", href: "/patients", icon: ICONS.patients },
+  { label: "Send Medication Reminder", description: "Send medication SMS", href: "/sms", icon: ICONS.sms },
 ];
 
 export default async function NurseDashboardPage() {
@@ -46,7 +39,8 @@ export default async function NurseDashboardPage() {
       title="Nurse Station"
       subtitle="Manage the patient queue, record vitals and send clinical reminders."
       actions={ACTIONS}
-      upcoming={UPCOMING}
-    />
+    >
+      <DashboardStats />
+    </RoleDashboard>
   );
 }

@@ -4,17 +4,21 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/Header";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
 import { formatDateTime } from "@/lib/utils";
+import { useCan } from "@/lib/session-context";
+import { QueueView } from "@/components/appointments/QueueView";
 
 type Appointment = {
   id: number;
-  doctorName: string;
+  doctorName: string | null;
   appointmentDate: string;
+  appointmentType: string | null;
   status: string;
   reminderSent: boolean;
   notes?: string;
   patient: { id: number; fullName: string; phoneNumber: string };
+  department: { id: number; name: string; code: string } | null;
+  doctor: { id: number; name: string } | null;
 };
 
 const STATUS_OPTIONS = [
@@ -26,6 +30,8 @@ const STATUS_OPTIONS = [
 ];
 
 export default function AppointmentsPage() {
+  const can = useCan();
+  const canManage = can("appointments.manage");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
@@ -44,7 +50,12 @@ export default function AppointmentsPage() {
     setLoading(false);
   }, [search, status, page]);
 
-  useEffect(() => { fetchAppointments(); }, [fetchAppointments]);
+  useEffect(() => { if (canManage) fetchAppointments(); }, [fetchAppointments, canManage]);
+
+  // Nurses and doctors work from the department queue, not the management list.
+  if (!canManage) {
+    return <QueueView />;
+  }
 
   async function updateStatus(id: number, newStatus: string) {
     await fetch(`/api/appointments/${id}`, {
@@ -105,7 +116,7 @@ export default function AppointmentsPage() {
         <table className="min-w-full text-sm">
           <thead className="bg-slate-50">
             <tr>
-              {["Patient", "Doctor", "Date & Time", "Status", "Reminder", "Actions"].map((h) => (
+              {["Patient", "Department", "Doctor", "Date & Time", "Status", "Reminder", "Actions"].map((h) => (
                 <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
                   {h}
                 </th>
@@ -114,10 +125,10 @@ export default function AppointmentsPage() {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading ? (
-              <tr><td colSpan={6} className="py-12 text-center text-sm text-slate-400">Loading…</td></tr>
+              <tr><td colSpan={7} className="py-12 text-center text-sm text-slate-400">Loading…</td></tr>
             ) : appointments.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-12 text-center text-sm text-slate-400">
+                <td colSpan={7} className="py-12 text-center text-sm text-slate-400">
                   No appointments found.{" "}
                   <Link href="/appointments/new" className="text-blue-600 hover:underline">Schedule one.</Link>
                 </td>
@@ -131,7 +142,8 @@ export default function AppointmentsPage() {
                     </Link>
                     <p className="text-xs text-slate-400">{a.patient.phoneNumber}</p>
                   </td>
-                  <td className="px-4 py-3 text-slate-700">Dr. {a.doctorName}</td>
+                  <td className="px-4 py-3 text-slate-600">{a.department?.name ?? "—"}</td>
+                  <td className="px-4 py-3 text-slate-700">{a.doctor ? a.doctor.name : <span className="text-amber-600">Unassigned</span>}</td>
                   <td className="px-4 py-3 text-slate-700">{formatDateTime(a.appointmentDate)}</td>
                   <td className="px-4 py-3">
                     <select
@@ -163,7 +175,7 @@ export default function AppointmentsPage() {
                         onClick={() => handleDelete(a.id)}
                         className="rounded-md px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
                       >
-                        Delete
+                        Cancel
                       </button>
                     </div>
                   </td>

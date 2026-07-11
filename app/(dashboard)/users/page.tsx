@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Input, Select } from "@/components/ui/Input";
 import { formatDate } from "@/lib/utils";
 
+type Department = { id: number; name: string; code: string };
+
 type User = {
   id: number;
   username: string;
@@ -14,10 +16,19 @@ type User = {
   name: string;
   role: string;
   createdAt: string;
+  department?: { id: number; name: string; code: string } | null;
+};
+
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN: "Admin",
+  RECEPTIONIST: "Receptionist",
+  NURSE: "Nurse",
+  DOCTOR: "Doctor",
 };
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -25,8 +36,10 @@ export default function UsersPage() {
   const [success, setSuccess] = useState("");
 
   const [form, setForm] = useState({
-    name: "", username: "", email: "", password: "", role: "RECEPTIONIST",
+    name: "", username: "", email: "", password: "", role: "RECEPTIONIST", departmentId: "",
   });
+
+  const departmentRequired = form.role === "DOCTOR" || form.role === "NURSE";
 
   function fetchUsers() {
     setLoading(true);
@@ -36,16 +49,34 @@ export default function UsersPage() {
   }
 
   useEffect(() => { fetchUsers(); }, []);
+  useEffect(() => {
+    fetch("/api/departments?activeOnly=1")
+      .then((r) => r.json())
+      .then((d) => setDepartments(Array.isArray(d) ? d : []));
+  }, []);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     setError("");
 
+    if (departmentRequired && !form.departmentId) {
+      setError("Department is required for doctors and nurses.");
+      setSaving(false);
+      return;
+    }
+
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({
+        name: form.name,
+        username: form.username,
+        email: form.email,
+        password: form.password,
+        role: form.role,
+        departmentId: form.departmentId ? parseInt(form.departmentId) : null,
+      }),
     });
     const data = await res.json();
     setSaving(false);
@@ -53,7 +84,7 @@ export default function UsersPage() {
     if (!res.ok) { setError(data.error ?? "Failed to create user."); return; }
     setSuccess(`User "${form.username}" created.`);
     setShowForm(false);
-    setForm({ name: "", username: "", email: "", password: "", role: "RECEPTIONIST" });
+    setForm({ name: "", username: "", email: "", password: "", role: "RECEPTIONIST", departmentId: "" });
     fetchUsers();
   }
 
@@ -87,11 +118,23 @@ export default function UsersPage() {
               id="role"
               label="Role"
               value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value })}
+              onChange={(e) => setForm({ ...form, role: e.target.value, departmentId: "" })}
               options={[
                 { value: "ADMIN", label: "Administrator" },
                 { value: "RECEPTIONIST", label: "Receptionist" },
-                { value: "DOCTOR", label: "Doctor / Nurse" },
+                { value: "NURSE", label: "Nurse" },
+                { value: "DOCTOR", label: "Doctor" },
+              ]}
+            />
+            <Select
+              id="departmentId"
+              label={departmentRequired ? "Department" : "Department (optional)"}
+              required={departmentRequired}
+              value={form.departmentId}
+              onChange={(e) => setForm({ ...form, departmentId: e.target.value })}
+              options={[
+                { value: "", label: departmentRequired ? "Select a department…" : "No department" },
+                ...departments.map((d) => ({ value: String(d.id), label: d.name })),
               ]}
             />
             {error && <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
@@ -113,14 +156,14 @@ export default function UsersPage() {
         <table className="min-w-full text-sm">
           <thead className="bg-slate-50">
             <tr>
-              {["Name", "Username", "Email", "Role", "Created", "Actions"].map((h) => (
+              {["Name", "Username", "Email", "Role", "Department", "Created", "Actions"].map((h) => (
                 <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading ? (
-              <tr><td colSpan={6} className="py-12 text-center text-sm text-slate-400">Loading…</td></tr>
+              <tr><td colSpan={7} className="py-12 text-center text-sm text-slate-400">Loading…</td></tr>
             ) : users.map((u) => (
               <tr key={u.id} className="hover:bg-slate-50">
                 <td className="px-4 py-3">
@@ -134,11 +177,9 @@ export default function UsersPage() {
                 <td className="px-4 py-3 font-mono text-slate-600">{u.username}</td>
                 <td className="px-4 py-3 text-slate-600">{u.email}</td>
                 <td className="px-4 py-3">
-                  <Badge
-                    status={u.role}
-                    label={u.role === "ADMIN" ? "Admin" : u.role === "RECEPTIONIST" ? "Receptionist" : "Doctor/Nurse"}
-                  />
+                  <Badge status={u.role} label={ROLE_LABELS[u.role] ?? u.role} />
                 </td>
+                <td className="px-4 py-3 text-slate-600">{u.department?.name ?? "—"}</td>
                 <td className="px-4 py-3 text-slate-400">{formatDate(u.createdAt)}</td>
                 <td className="px-4 py-3">
                   <button

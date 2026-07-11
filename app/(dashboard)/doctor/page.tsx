@@ -1,5 +1,6 @@
 import { getSession, requireAuth } from "@/lib/auth";
-import { RoleDashboard, type QuickAction, type UpcomingItem } from "@/components/dashboard/RoleDashboard";
+import { RoleDashboard, type QuickAction } from "@/components/dashboard/RoleDashboard";
+import { DashboardStats } from "@/components/dashboard/DashboardStats";
 
 export const dynamic = "force-dynamic";
 
@@ -22,17 +23,9 @@ const ICONS: Record<string, React.ReactNode> = {
 };
 
 const ACTIONS: QuickAction[] = [
-  { label: "Patient History", description: "Review medical records", href: "/patients", icon: ICONS.history },
-  { label: "Appointments", description: "View your appointments", href: "/appointments", icon: ICONS.calendar },
-  { label: "Laboratory Reminders", description: "Send lab test SMS", href: "/sms", icon: ICONS.sms },
-  { label: "Medication Reminders", description: "Send medication SMS", href: "/sms", icon: ICONS.sms },
-  { label: "Follow-up Reminders", description: "Send follow-up SMS", href: "/sms", icon: ICONS.sms },
-];
-
-const UPCOMING: UpcomingItem[] = [
-  { label: "Consultation", description: "Conduct and record consultations" },
-  { label: "Diagnosis", description: "Record diagnosis information" },
-  { label: "Treatment Notes", description: "Document treatment plans" },
+  { label: "View Patients", description: "Review patient records", href: "/patients", icon: ICONS.history },
+  { label: "Start Consultation", description: "Work your appointment queue", href: "/appointments", icon: ICONS.calendar },
+  { label: "Send Laboratory Reminder", description: "Send lab test SMS", href: "/sms", icon: ICONS.sms },
 ];
 
 export default async function DoctorDashboardPage() {
@@ -46,7 +39,8 @@ export default async function DoctorDashboardPage() {
       title="Doctor's Desk"
       subtitle="Review patient history, manage consultations and send clinical reminders."
       actions={ACTIONS}
-      upcoming={UPCOMING}
-    />
+    >
+      <DashboardStats />
+    </RoleDashboard>
   );
 }

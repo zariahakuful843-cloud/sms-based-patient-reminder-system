@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requirePermission, authErrorStatus } from "@/lib/auth";
+import { isDepartmentScoped } from "@/lib/rbac";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  let session;
   try {
-    await requirePermission("patients.read");
+    session = await requirePermission("patients.read");
   } catch (err) {
     const status = authErrorStatus(err);
     return NextResponse.json({ error: status === 401 ? "Unauthorized" : "Forbidden" }, { status });
@@ -19,6 +21,14 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     },
   });
   if (!patient) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // Nurses and doctors may only view patients seen in their own department.
+  if (isDepartmentScoped(session.role) && session.departmentId) {
+    const inDept = await prisma.appointment.count({
+      where: { patientId: patient.id, departmentId: session.departmentId },
+    });
+    if (inDept === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
   return NextResponse.json(patient);
 }
 

@@ -13,6 +13,7 @@ export type Permission =
   | "users.manage"
   | "settings.manage"
   | "reports.view"
+  | "departments.manage"
   // Reception scope
   | "patients.create"
   | "patients.update"
@@ -57,7 +58,6 @@ const NURSE_PERMISSIONS: Permission[] = [
   "medication.reminders.create",
   "followup.reminders.create",
   "vaccination.reminders.create",
-  "antenatal.reminders.create",
   "sms.history.read",
 ];
 
@@ -81,8 +81,10 @@ const ALL_PERMISSIONS: Permission[] = Array.from(
     "users.manage",
     "settings.manage",
     "reports.view",
+    "departments.manage",
     "patients.delete",
     "sms.manage",
+    "antenatal.reminders.create",
     ...RECEPTIONIST_PERMISSIONS,
     ...NURSE_PERMISSIONS,
     ...DOCTOR_PERMISSIONS,
@@ -156,15 +158,27 @@ export function canSendReminderType(
 // permission a role needs to view that area. The first matching prefix wins.
 export const ROUTE_PERMISSION: { prefix: string; permission: Permission }[] = [
   { prefix: "/users", permission: "users.manage" },
+  { prefix: "/departments", permission: "departments.manage" },
   { prefix: "/settings", permission: "settings.manage" },
   { prefix: "/reports", permission: "reports.view" },
   { prefix: "/admin", permission: "users.manage" },
   { prefix: "/reception", permission: "appointments.manage" },
   { prefix: "/nurse", permission: "queue.manage" },
   { prefix: "/doctor", permission: "consultation.manage" },
+  { prefix: "/patients", permission: "patients.read" },
+  { prefix: "/appointments", permission: "appointments.read" },
+  { prefix: "/sms", permission: "sms.history.read" },
 ];
 
 export function requiredPermissionForPath(pathname: string): Permission | null {
   const match = ROUTE_PERMISSION.find((r) => pathname.startsWith(r.prefix));
   return match ? match.permission : null;
+}
+
+// Department-scoped roles only see patients/appointments in their own
+// department. Admin sees everything; receptionists register/book across the
+// whole hospital, so they are not department-restricted.
+export function isDepartmentScoped(role: string | null | undefined): boolean {
+  const r = toRole(role);
+  return r === "NURSE" || r === "DOCTOR";
 }

@@ -1,5 +1,6 @@
 import { getSession, requireAuth } from "@/lib/auth";
 import { RoleDashboard, type QuickAction } from "@/components/dashboard/RoleDashboard";
+import { DashboardStats } from "@/components/dashboard/DashboardStats";
 
 export const dynamic = "force-dynamic";
 
@@ -28,10 +29,8 @@ const ICONS: Record<string, React.ReactNode> = {
 
 const ACTIONS: QuickAction[] = [
   { label: "Register Patient", description: "Add a new patient record", href: "/patients/new", icon: ICONS.addPatient },
-  { label: "New Appointment", description: "Schedule an appointment", href: "/appointments/new", icon: ICONS.calendar },
-  { label: "Manage Appointments", description: "Reschedule or cancel", href: "/appointments", icon: ICONS.calendar },
-  { label: "Appointment Reminders", description: "Send appointment SMS", href: "/sms", icon: ICONS.sms },
-  { label: "Patient Records", description: "Search and update patients", href: "/patients", icon: ICONS.patients },
+  { label: "Book Appointment", description: "Schedule an appointment", href: "/appointments/new", icon: ICONS.calendar },
+  { label: "Send Appointment Reminder", description: "Send appointment SMS", href: "/sms", icon: ICONS.sms },
 ];
 
 export default async function ReceptionDashboardPage() {
@@ -45,6 +44,8 @@ export default async function ReceptionDashboardPage() {
       title="Reception Desk"
       subtitle="Register patients, manage appointments and send appointment reminders."
       actions={ACTIONS}
-    />
+    >
+      <DashboardStats />
+    </RoleDashboard>
   );
 }

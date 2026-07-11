@@ -8,6 +8,10 @@ import { Button } from "@/components/ui/Button";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 
 type Patient = { id: number; fullName: string; phoneNumber: string };
+type Department = { id: number; name: string; active: boolean };
+type Doctor = { id: number; name: string };
+
+const APPOINTMENT_TYPES = ["Consultation", "Follow-up", "Review", "Vaccination", "Antenatal", "Procedure"];
 
 export default function NewAppointmentPage() {
   const router = useRouter();
@@ -15,11 +19,15 @@ export default function NewAppointmentPage() {
   const prefillPatientId = searchParams.get("patientId");
 
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({
     patientId: prefillPatientId ?? "",
-    doctorName: "",
+    departmentId: "",
+    doctorId: "",
+    appointmentType: "Consultation",
     appointmentDate: "",
     appointmentTime: "",
     notes: "",
@@ -29,7 +37,22 @@ export default function NewAppointmentPage() {
     fetch("/api/patients?limit=200")
       .then((r) => r.json())
       .then((d) => setPatients(d.patients ?? []));
+    fetch("/api/departments?activeOnly=1")
+      .then((r) => r.json())
+      .then((d) => setDepartments(Array.isArray(d) ? d : []));
   }, []);
+
+  // When the department changes, load only that department's doctors and reset
+  // any previously chosen doctor.
+  useEffect(() => {
+    if (!form.departmentId) {
+      setDoctors([]);
+      return;
+    }
+    fetch(`/api/users/doctors?departmentId=${form.departmentId}`)
+      .then((r) => r.json())
+      .then((d) => setDoctors(Array.isArray(d) ? d : []));
+  }, [form.departmentId]);
 
   function set(field: string, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -40,10 +63,16 @@ export default function NewAppointmentPage() {
     setLoading(true);
     setError("");
 
-    const appointmentDate = form.appointmentDate && form.appointmentTime
-      ? new Date(`${form.appointmentDate}T${form.appointmentTime}`).toISOString()
-      : null;
+    const appointmentDate =
+      form.appointmentDate && form.appointmentTime
+        ? new Date(`${form.appointmentDate}T${form.appointmentTime}`).toISOString()
+        : null;
 
+    if (!form.departmentId) {
+      setError("Please select a department.");
+      setLoading(false);
+      return;
+    }
     if (!appointmentDate) {
       setError("Please select both date and time.");
       setLoading(false);
@@ -55,7 +84,9 @@ export default function NewAppointmentPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         patientId: parseInt(form.patientId),
-        doctorName: form.doctorName,
+        departmentId: parseInt(form.departmentId),
+        doctorId: form.doctorId ? parseInt(form.doctorId) : null,
+        appointmentType: form.appointmentType,
         appointmentDate,
         notes: form.notes || null,
       }),
@@ -76,6 +107,15 @@ export default function NewAppointmentPage() {
     { value: "", label: "Select a patient…" },
     ...patients.map((p) => ({ value: String(p.id), label: `${p.fullName} (${p.phoneNumber})` })),
   ];
+  const departmentOptions = [
+    { value: "", label: "Select a department…" },
+    ...departments.map((d) => ({ value: String(d.id), label: d.name })),
+  ];
+  const doctorOptions = [
+    { value: "", label: form.departmentId ? "Any available doctor (optional)" : "Select a department first" },
+    ...doctors.map((d) => ({ value: String(d.id), label: d.name })),
+  ];
+  const typeOptions = APPOINTMENT_TYPES.map((t) => ({ value: t, label: t }));
 
   return (
     <div>
@@ -100,13 +140,31 @@ export default function NewAppointmentPage() {
             options={patientOptions}
           />
 
-          <Input
-            id="doctorName"
-            label="Doctor / Clinician"
+          <Select
+            id="departmentId"
+            label="Department"
             required
-            placeholder="e.g. Dr. Mensah"
-            value={form.doctorName}
-            onChange={(e) => set("doctorName", e.target.value)}
+            value={form.departmentId}
+            onChange={(e) => setForm((f) => ({ ...f, departmentId: e.target.value, doctorId: "" }))}
+            options={departmentOptions}
+          />
+
+          <Select
+            id="doctorId"
+            label="Doctor (optional)"
+            value={form.doctorId}
+            disabled={!form.departmentId}
+            onChange={(e) => set("doctorId", e.target.value)}
+            options={doctorOptions}
+          />
+
+          <Select
+            id="appointmentType"
+            label="Appointment Type"
+            required
+            value={form.appointmentType}
+            onChange={(e) => set("appointmentType", e.target.value)}
+            options={typeOptions}
           />
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -130,7 +188,7 @@ export default function NewAppointmentPage() {
 
           <Textarea
             id="notes"
-            label="Notes (optional)"
+            label="Notes"
             rows={3}
             placeholder="Any additional notes about this appointment…"
             value={form.notes}

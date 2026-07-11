@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
     username: user.username,
     role,
     name: user.name,
+    department: user.department,
   });
 
   const response = NextResponse.json({ success: true, role, name: user.name });
