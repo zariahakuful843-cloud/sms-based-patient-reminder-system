@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
+import { getSmsStats } from "@/lib/smsStats";
 
 export async function GET(req: NextRequest) {
   try {
@@ -26,9 +27,6 @@ export async function GET(req: NextRequest) {
     completedAppointments,
     cancelledAppointments,
     missedAppointments,
-    totalSMS,
-    sentSMS,
-    failedSMS,
     patientsByGender,
     appointmentsByStatus,
     appointmentsByMonth,
@@ -70,23 +68,7 @@ export async function GET(req: NextRequest) {
       },
     }),
 
-    // SMS totals from SMSLog model
-    // NOTE: your generated Prisma client appears to expose this as `sMSLog`.
-    prisma.sMSLog.count({
-      where: dateFilter ? { sentAt: dateFilter } : undefined,
-    }),
-    prisma.sMSLog.count({
-      where: {
-        status: "SENT",
-        ...(dateFilter ? { sentAt: dateFilter } : {}),
-      },
-    }),
-    prisma.sMSLog.count({
-      where: {
-        status: "FAILED",
-        ...(dateFilter ? { sentAt: dateFilter } : {}),
-      },
-    }),
+
 
     prisma.patient.groupBy({
       by: ["gender"],
@@ -119,6 +101,9 @@ export async function GET(req: NextRequest) {
     `,
   ]);
 
+  const smsStats = await getSmsStats({ from: from ? new Date(from) : undefined, to: to ? new Date(to) : undefined });
+
+
   return NextResponse.json({
     patients: {
       total: totalPatients,
@@ -144,9 +129,12 @@ export async function GET(req: NextRequest) {
       })),
     },
     sms: {
-      total: totalSMS,
-      sent: sentSMS,
-      failed: failedSMS,
+      total: smsStats.total,
+      sent: smsStats.sent,
+      // treat DELIVERED = SENT per project rule
+      delivered: smsStats.delivered,
+      pending: smsStats.pending,
+      failed: smsStats.failed,
       byMonth: smsByMonth.map((m) => ({
         month: m.month,
         count: Number(m.count),
@@ -154,4 +142,5 @@ export async function GET(req: NextRequest) {
     },
   });
 }
+
 

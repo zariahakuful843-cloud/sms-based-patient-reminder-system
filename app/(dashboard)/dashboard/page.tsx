@@ -34,14 +34,10 @@ export default async function DashboardPage() {
     prisma.appointment.count({
       where: { appointmentDate: { gte: today, lt: tomorrow } },
     }),
-    prisma.appointment.count({
-      where: {
-        reminderSent: false,
-        status: "SCHEDULED",
-        appointmentDate: { gte: new Date() },
-      },
+    prisma.scheduledReminder.count({
+      where: { status: "PENDING" },
     }),
-prisma.sMSLog.count({
+    prisma.sMSLog.count({
       where: { sentAt: { gte: today } },
     }),
     prisma.appointment.findMany({

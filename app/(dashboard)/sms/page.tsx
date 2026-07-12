@@ -297,23 +297,24 @@ export default function SMSPage() {
     })();
   }, []);
 
-  // Fetch stats
+  // Fetch stats (single source of truth)
   useEffect(() => {
     (async () => {
       try {
-        const r = await fetch(`/api/sms/logs?limit=1`);
+        const r = await fetch(`/api/sms/stats`);
         const d = await r.json();
-        const allLogs = d.logs ?? [];
-        const sent = allLogs.filter((l: SMSLog) => l.status === "SENT").length;
-        const failed = allLogs.filter((l: SMSLog) => l.status === "FAILED").length;
-        const total = d.total ?? 0;
-        const pending = Math.max(0, total - sent - failed);
-        setStats({ sent: total, delivered: sent, pending, failed });
+        setStats({
+          sent: d.sent ?? 0,
+          delivered: d.delivered ?? 0,
+          pending: d.pending ?? 0,
+          failed: d.failed ?? 0,
+        });
       } catch (e) {
         console.error("Failed to fetch stats:", e);
       }
     })();
   }, []);
+
 
   const computedSinglePreview = useMemo(() => {
     const dt = new Date(`${singleForm.appointmentDate}T${singleForm.appointmentTime}`);

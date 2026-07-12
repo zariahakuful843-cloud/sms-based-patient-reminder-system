@@ -41,6 +41,7 @@ export default function ReportsPage() {
   const [reminderTypes, setReminderTypes] = useState<ChartData[]>([]);
   const [monthlyTrends, setMonthlyTrends] = useState<any[]>([]);
 
+
   // SMS Reports table
   const [logs, setLogs] = useState<SMSLog[]>([]);
   const [total, setTotal] = useState(0);
@@ -61,51 +62,48 @@ export default function ReportsPage() {
       try {
         const res = await fetch(`/api/sms/stats`);
         const data = await res.json();
-        const total = data.sent || 0;
+
+        const sent = data.sent || 0;
         const delivered = data.delivered || 0;
-        const rate = total > 0 ? Math.round((delivered / total) * 100) : 0;
+        const failed = data.failed || 0;
+        const pendingMessages = data.pendingMessages ?? data.pending ?? 0;
+
+        const rate = sent > 0 ? Math.round((delivered / sent) * 100) : 0;
+
         setStats({
-          totalSent: total,
+          totalSent: sent,
           totalDelivered: delivered,
-          totalPending: data.pending || 0,
-          totalFailed: data.failed || 0,
+          totalPending: pendingMessages,
+          totalFailed: failed,
           deliveryRate: rate,
         });
 
-        // Mock chart data
         setSmsPerformance([
-          { name: "Sent", value: data.sent || 0, percentage: 0 },
-          { name: "Delivered", value: data.delivered || 0, percentage: 0 },
-          { name: "Failed", value: data.failed || 0, percentage: 0 },
+          { name: "Sent", value: sent, percentage: 0 },
+          { name: "Delivered", value: delivered, percentage: 0 },
+          { name: "Failed", value: failed, percentage: 0 },
         ]);
 
         setDeliveryStatus([
-          { name: "Delivered", value: data.delivered || 0, percentage: rate },
-          { name: "Pending", value: data.pending || 0, percentage: 0 },
-          { name: "Failed", value: data.failed || 0, percentage: 0 },
+          {
+            name: "Delivered",
+            value: delivered,
+            percentage: rate,
+          },
+          { name: "Pending", value: pendingMessages, percentage: 0 },
+          { name: "Failed", value: failed, percentage: 0 },
         ]);
 
-        setReminderTypes([
-          { name: "Appointment", value: 250, percentage: 35 },
-          { name: "Medication", value: 180, percentage: 25 },
-          { name: "Vaccination", value: 160, percentage: 22 },
-          { name: "Antenatal", value: 90, percentage: 13 },
-          { name: "Follow-up", value: 30, percentage: 5 },
-        ]);
 
-        // Monthly trends
-        const now = new Date();
-        const trends = [];
-        for (let i = 5; i >= 0; i--) {
-          const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-          const month = d.toLocaleDateString("en-GB", { month: "short", year: "2-digit" });
-          trends.push({
-            month,
-            sent: Math.floor(Math.random() * 500) + 100,
-            delivered: Math.floor(Math.random() * 450) + 80,
-          });
-        }
-        setMonthlyTrends(trends);
+        setReminderTypes(
+          (data.reminderTypes ?? []).map((rt: any) => ({
+            name: rt.name,
+            value: rt.value,
+            percentage: 0,
+          }))
+        );
+
+        setMonthlyTrends(data.monthlyTrends ?? []);
 
         setLoading(false);
       } catch (e) {
