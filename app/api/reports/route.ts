@@ -133,7 +133,8 @@ export async function GET(req: NextRequest) {
       sent: smsStats.sent,
       // treat DELIVERED = SENT per project rule
       delivered: smsStats.delivered,
-      pending: smsStats.pending,
+      pending: smsStats.pendingMessages,
+
       failed: smsStats.failed,
       byMonth: smsByMonth.map((m) => ({
         month: m.month,
