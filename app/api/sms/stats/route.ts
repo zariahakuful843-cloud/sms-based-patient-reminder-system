@@ -42,8 +42,11 @@ export async function GET(req: NextRequest) {
       name: r.reminderType,
       value: r._count._all,
     })),
+    // monthlyTrends already comes from lib/smsStats.ts (single source of truth)
+    monthlyTrends: stats.monthlyTrends,
   });
 }
+
 
 
 
