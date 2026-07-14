@@ -63,12 +63,13 @@ export default function ReportsPage() {
         const res = await fetch(`/api/sms/stats`);
         const data = await res.json();
 
+        const totalSms = data.total || 0;
         const sent = data.sent || 0;
         const delivered = data.delivered || 0;
         const failed = data.failed || 0;
         const pendingMessages = data.pendingMessages ?? data.pending ?? 0;
 
-        const rate = sent > 0 ? Math.round((delivered / sent) * 100) : 0;
+        const rate = totalSms > 0 ? Math.round((delivered / totalSms) * 100) : 0;
 
         setStats({
           totalSent: sent,
