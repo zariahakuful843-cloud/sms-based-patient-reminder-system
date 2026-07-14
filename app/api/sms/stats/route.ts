@@ -21,12 +21,11 @@ export async function GET(req: NextRequest) {
   const dateWhere =
     from && to ? { sentAt: { gte: from, lte: to } as const } : undefined;
 
-  // KPI totals from shared service
+  // KPI totals + monthly trends from shared service (single source of truth)
   const stats = await getSmsStats(from && to ? { from, to } : undefined);
 
-  // Keep backward compatibility with older clients: map pending -> pendingMessages.
+  // Backward compatibility alias used by the current Reports page.
   const pending = stats.pendingMessages;
-
 
   // Reminder type distribution (SMS analytics): GROUP BY reminderType
   const reminderTypeRows = await prisma.sMSLog.groupBy({
@@ -36,39 +35,16 @@ export async function GET(req: NextRequest) {
     orderBy: { reminderType: "asc" },
   });
 
-  // Monthly trends: GROUP BY sentAt month
-  // (If Prisma version doesn’t support date truncation directly, this uses raw SQL.)
-  const monthlyTrends = await prisma.$queryRaw<
-    Array<{ month: string; sent: bigint; delivered: bigint }>
-  >`
-    SELECT
-      to_char(date_trunc('month', "sentAt"), 'Mon YYYY') AS month,
-      COUNT(*) FILTER (WHERE "status" = 'SENT')::bigint AS sent,
-      COUNT(*) FILTER (WHERE "status" = 'SENT')::bigint AS delivered
-    FROM "SMSLog"
-    ${from && to ? prisma.$queryRaw`WHERE "sentAt" BETWEEN ${from} AND ${to}` : prisma.$queryRaw``}
-    GROUP BY date_trunc('month', "sentAt")
-    ORDER BY date_trunc('month', "sentAt") DESC
-    LIMIT 6;
-  `;
-
-  // Reverse so UI shows oldest -> newest
-  const monthlyTrendsReversed = [...monthlyTrends].reverse().map((t) => ({
-    month: t.month,
-    sent: Number(t.sent),
-    delivered: Number(t.delivered),
-  }));
-
   return NextResponse.json({
     ...stats,
-    // Backward compatible alias used by the current Reports page.
     pending,
     reminderTypes: reminderTypeRows.map((r) => ({
       name: r.reminderType,
       value: r._count._all,
     })),
-    monthlyTrends: monthlyTrendsReversed,
   });
 }
+
+
 
 
