@@ -5,10 +5,11 @@ import { getSmsStats } from "@/lib/smsStats";
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
+    await requireAuth(["ADMIN"]);
   } catch {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
 
   const { searchParams } = new URL(req.url);
   const from = searchParams.get("from");

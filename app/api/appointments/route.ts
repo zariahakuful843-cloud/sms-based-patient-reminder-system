@@ -4,10 +4,11 @@ import { requireAuth } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAuth();
+    await requireAuth(["ADMIN", "RECEPTIONIST", "NURSE", "DOCTOR"]);
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
 
   const { searchParams } = new URL(req.url);
   const search = searchParams.get("search") ?? "";
