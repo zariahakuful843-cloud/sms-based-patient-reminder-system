@@ -6,6 +6,9 @@ import { PageHeader } from "@/components/layout/Header";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { formatDate, calculateAge } from "@/lib/utils";
+import { getSession } from "@/lib/auth";
+
+type Role = "ADMIN" | "RECEPTIONIST" | "NURSE" | "DOCTOR";
 
 type Patient = {
   id: number;
@@ -19,6 +22,8 @@ type Patient = {
 };
 
 export default function PatientsPage() {
+  const [role, setRole] = useState<Role | null>(null);
+
   const [patients, setPatients] = useState<Patient[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
@@ -40,6 +45,18 @@ export default function PatientsPage() {
     fetchPatients();
   }, [fetchPatients]);
 
+  useEffect(() => {
+    (async () => {
+      const session = await getSession();
+      const detected = (session?.role ?? "ANONYMOUS").trim().toUpperCase();
+      if (detected === "ADMIN" || detected === "RECEPTIONIST" || detected === "NURSE" || detected === "DOCTOR") {
+        setRole(detected as Role);
+      } else {
+        setRole(null);
+      }
+    })();
+  }, []);
+
   async function handleDelete(id: number, name: string) {
     if (!confirm(`Delete patient "${name}"? This cannot be undone.`)) return;
     await fetch(`/api/patients/${id}`, { method: "DELETE" });
@@ -48,20 +65,25 @@ export default function PatientsPage() {
 
   const totalPages = Math.ceil(total / limit);
 
+  const canRegisterPatient = role === "ADMIN" || role === "RECEPTIONIST";
+  const canDeletePatient = role === "ADMIN";
+
   return (
     <div>
       <PageHeader
         title="Patients"
         description={`${total} registered patient${total !== 1 ? "s" : ""}`}
         action={
-          <Link href="/patients/new">
-            <Button size="sm">
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-              Register Patient
-            </Button>
-          </Link>
+          canRegisterPatient ? (
+            <Link href="/patients/new">
+              <Button size="sm">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                Register Patient
+              </Button>
+            </Link>
+          ) : null
         }
       />
 
@@ -71,7 +93,10 @@ export default function PatientsPage() {
           type="search"
           placeholder="Search by name or phone number…"
           value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
           className="h-9 w-full max-w-sm rounded-lg border border-slate-300 bg-white px-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
@@ -82,7 +107,10 @@ export default function PatientsPage() {
           <thead className="bg-slate-50">
             <tr>
               {["Patient", "Gender", "Phone", "DOB / Age", "Appointments", "Registered", "Actions"].map((h) => (
-                <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <th
+                  key={h}
+                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500"
+                >
                   {h}
                 </th>
               ))}
@@ -99,9 +127,13 @@ export default function PatientsPage() {
               <tr>
                 <td colSpan={7} className="py-12 text-center text-sm text-slate-400">
                   No patients found.{" "}
-                  <Link href="/patients/new" className="text-blue-600 hover:underline">
-                    Register the first one.
-                  </Link>
+                  {canRegisterPatient ? (
+                    <Link href="/patients/new" className="text-blue-600 hover:underline">
+                      Register the first one.
+                    </Link>
+                  ) : (
+                    <span />
+                  )}
                 </td>
               </tr>
             ) : (
@@ -133,12 +165,14 @@ export default function PatientsPage() {
                       >
                         View
                       </Link>
-                      <button
-                        onClick={() => handleDelete(p.id, p.fullName)}
-                        className="rounded-md px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
-                      >
-                        Delete
-                      </button>
+                      {canDeletePatient && (
+                        <button
+                          onClick={() => handleDelete(p.id, p.fullName)}
+                          className="rounded-md px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
+                        >
+                          Delete
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -155,10 +189,20 @@ export default function PatientsPage() {
             Showing {(page - 1) * limit + 1}–{Math.min(page * limit, total)} of {total}
           </span>
           <div className="flex gap-2">
-            <Button variant="secondary" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={page === 1}
+              onClick={() => setPage(page - 1)}
+            >
               Previous
             </Button>
-            <Button variant="secondary" size="sm" disabled={page === totalPages} onClick={() => setPage(page + 1)}>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={page === totalPages}
+              onClick={() => setPage(page + 1)}
+            >
               Next
             </Button>
           </div>
@@ -167,3 +211,4 @@ export default function PatientsPage() {
     </div>
   );
 }
+
