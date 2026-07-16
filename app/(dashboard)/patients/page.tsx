@@ -6,9 +6,10 @@ import { PageHeader } from "@/components/layout/Header";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { formatDate, calculateAge } from "@/lib/utils";
-import { getSession } from "@/lib/auth";
 
 type Role = "ADMIN" | "RECEPTIONIST" | "NURSE" | "DOCTOR";
+
+
 
 type Patient = {
   id: number;
@@ -47,8 +48,14 @@ export default function PatientsPage() {
 
   useEffect(() => {
     (async () => {
-      const session = await getSession();
+      const res = await fetch("/api/auth/me", { credentials: "include" });
+      if (!res.ok) {
+        setRole(null);
+        return;
+      }
+      const session = (await res.json()) as { role?: string };
       const detected = (session?.role ?? "ANONYMOUS").trim().toUpperCase();
+
       if (detected === "ADMIN" || detected === "RECEPTIONIST" || detected === "NURSE" || detected === "DOCTOR") {
         setRole(detected as Role);
       } else {
@@ -56,6 +63,7 @@ export default function PatientsPage() {
       }
     })();
   }, []);
+
 
   async function handleDelete(id: number, name: string) {
     if (!confirm(`Delete patient "${name}"? This cannot be undone.`)) return;
