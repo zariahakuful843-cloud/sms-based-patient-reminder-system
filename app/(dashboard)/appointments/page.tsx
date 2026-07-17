@@ -4,11 +4,10 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/Header";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
 import { formatDateTime } from "@/lib/utils";
+import { Badge } from "@/components/ui/Badge";
 
 type Role = "ADMIN" | "RECEPTIONIST" | "NURSE" | "DOCTOR";
-
 
 type Appointment = {
   id: number;
@@ -16,7 +15,6 @@ type Appointment = {
   appointmentDate: string;
   status: string;
   reminderSent: boolean;
-  notes?: string;
   patient: { id: number; fullName: string; phoneNumber: string };
 };
 
@@ -87,21 +85,24 @@ export default function AppointmentsPage() {
 
   const totalPages = Math.ceil(total / limit);
 
+  // Workflow rules:
+  // ADMIN: full CRUD + status editing
+  // RECEPTIONIST: view + details (via /appointments/[id]) + status editing + create/edit; no delete
+  // NURSE: view + status editing only (no create/edit/delete)
+  // DOCTOR: view + open appointment + edit consultation notes only (no status editing from list)
+
   const canCreateAppointment = role === "ADMIN" || role === "RECEPTIONIST";
   const canEditAppointment = role === "ADMIN" || role === "RECEPTIONIST";
   const canDeleteAppointment = role === "ADMIN";
+
   const canUpdateStatus = role === "ADMIN" || role === "RECEPTIONIST" || role === "NURSE";
+  const showStatusSelect = canUpdateStatus && role !== "DOCTOR";
 
-  const showStatusControl = role === "NURSE" || role === "ADMIN" || role === "RECEPTIONIST";
-
-  const showAppointmentDate = role !== "DOCTOR"; // DOCTOR hides appointment date
-  const showDoctorColumn = role !== "DOCTOR"; // DOCTOR hides doctor selector/doctor field
-  const hideEditAndDelete = role === "NURSE" || role === "DOCTOR"; // per requirements
+  // Per RBAC matrix: all roles (ADMIN/RECEPTIONIST/NURSE/DOCTOR) can view appointment date/doctor info in the list.
+  const showAppointmentDate = true;
+  const showDoctorColumn = true;
 
   const showNewAppointment = canCreateAppointment;
-
-  const shouldShowStatusColumn = role === "DOCTOR" ? true : true;
-  const showStatusSelect = role !== "DOCTOR"; // DOCTOR cannot edit status from this page
 
   return (
     <div>
@@ -155,7 +156,7 @@ export default function AppointmentsPage() {
         <table className="min-w-full text-sm">
           <thead className="bg-slate-50">
             <tr>
-              {!hideDoctorColumnGuard(showDoctorColumn) && (
+              {showDoctorColumn && (
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Patient</th>
               )}
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Patient</th>
@@ -165,9 +166,7 @@ export default function AppointmentsPage() {
               {showAppointmentDate && (
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Date &amp; Time</th>
               )}
-              {shouldShowStatusColumn && (
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
-              )}
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Reminder</th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
             </tr>
@@ -175,18 +174,13 @@ export default function AppointmentsPage() {
           <tbody className="divide-y divide-slate-100">
             {loading ? (
               <tr>
-                <td colSpan={6} className="py-12 text-center text-sm text-slate-400">
-                  Loading…
-                </td>
+                <td colSpan={6} className="py-12 text-center text-sm text-slate-400">Loading…</td>
               </tr>
             ) : appointments.length === 0 ? (
               <tr>
                 <td colSpan={6} className="py-12 text-center text-sm text-slate-400">
-                  No appointments found.{" "}
-                  {showNewAppointment ? (
-                    <Link href="/appointments/new" className="text-blue-600 hover:underline">
-                      Schedule one.
-                    </Link>
+                  No appointments found. {showNewAppointment ? (
+                    <Link href="/appointments/new" className="text-blue-600 hover:underline">Schedule one.</Link>
                   ) : (
                     <span />
                   )}
@@ -196,10 +190,7 @@ export default function AppointmentsPage() {
               appointments.map((a) => (
                 <tr key={a.id} className="hover:bg-slate-50">
                   <td className="px-4 py-3">
-                    <Link
-                      href={`/patients/${a.patient.id}`}
-                      className="font-medium text-blue-600 hover:underline"
-                    >
+                    <Link href={`/patients/${a.patient.id}`} className="font-medium text-blue-600 hover:underline">
                       {a.patient.fullName}
                     </Link>
                     <p className="text-xs text-slate-400">{a.patient.phoneNumber}</p>
@@ -211,22 +202,16 @@ export default function AppointmentsPage() {
                   )}
 
                   <td className="px-4 py-3">
-                    {showStatusControl ? (
-                      showStatusSelect ? (
-                        <select
-                          value={a.status}
-                          onChange={(e) => updateStatus(a.id, e.target.value)}
-                          className="rounded-md border-0 bg-transparent text-xs font-semibold focus:ring-2 focus:ring-blue-500"
-                        >
-                          {["SCHEDULED", "COMPLETED", "CANCELLED", "MISSED"].map((s) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <span className="text-xs font-semibold text-slate-800">{a.status}</span>
-                      )
+                    {showStatusSelect ? (
+                      <select
+                        value={a.status}
+                        onChange={(e) => updateStatus(a.id, e.target.value)}
+                        className="rounded-md border-0 bg-transparent text-xs font-semibold focus:ring-2 focus:ring-blue-500"
+                      >
+                        {["SCHEDULED", "COMPLETED", "CANCELLED", "MISSED"].map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
                     ) : (
                       <span className="text-xs font-semibold text-slate-800">{a.status}</span>
                     )}
@@ -242,7 +227,17 @@ export default function AppointmentsPage() {
 
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
-                      {!hideEditAndDelete && canEditAppointment && (
+                      {/* View/Edit: list directs to appointment details always; edit UI is enforced in details page */}
+                      {role && (
+                        <Link
+                          href={`/appointments/${a.id}`}
+                          className="rounded-md px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
+                        >
+                          View
+                        </Link>
+                      )}
+
+                      {canEditAppointment && (
                         <Link
                           href={`/appointments/${a.id}`}
                           className="rounded-md px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
@@ -250,23 +245,8 @@ export default function AppointmentsPage() {
                           Edit
                         </Link>
                       )}
-                      {role === "DOCTOR" && (
-                        <Link
-                          href={`/appointments/${a.id}`}
-                          className="rounded-md px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
-                        >
-                          Edit
-                        </Link>
-                      )}
-                      {canDeleteAppointment && !hideEditAndDelete && (
-                        <button
-                          onClick={() => handleDelete(a.id)}
-                          className="rounded-md px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
-                        >
-                          Delete
-                        </button>
-                      )}
-                      {canDeleteAppointment && role === "ADMIN" && (
+
+                      {canDeleteAppointment && (
                         <button
                           onClick={() => handleDelete(a.id)}
                           className="rounded-md px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
@@ -298,9 +278,5 @@ export default function AppointmentsPage() {
       )}
     </div>
   );
-}
-
-function hideDoctorColumnGuard(showDoctorColumn: boolean) {
-  return !showDoctorColumn;
 }
 

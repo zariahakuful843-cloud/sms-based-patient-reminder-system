@@ -201,63 +201,80 @@ export default async function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-4">
-          {[
-            {
-              label: "Register Patient",
-              href: "/patients/new",
-              color: "blue",
-              icon: (
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-              ),
-            },
-            {
-              label: "New Appointment",
-              href: "/appointments/new",
-              color: "green",
-              icon: (
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z" />
-                </svg>
-              ),
-            },
-            {
-              label: "Send SMS Reminder",
-              href: "/sms",
-              color: "blue",
-              icon: (
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M22 12h-4l-2 2H2l2-2 2-2h4l2-2h4l2 2z" />
-                </svg>
-              ),
-            },
-            {
-              label: "View Reports",
-              href: "/reports",
-              color: "blue",
-              icon: (
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M14 19V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z" />
-                </svg>
-              ),
-            },
-          ].map(({ label, href, icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className="group rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
-            >
-              <div className="flex items-center gap-3">
-                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-700 ring-1 ring-blue-100 group-hover:bg-blue-100 transition-colors">
-                  {icon}
-                </span>
-                <span className="text-sm sm:text-base font-semibold text-slate-900">{label}</span>
-              </div>
-            </Link>
-          ))}
+          {(() => {
+            const role = (session?.role ?? "").trim().toUpperCase();
+            const canRegisterPatient = role === "ADMIN" || role === "RECEPTIONIST";
+            const canNewAppointment = role === "ADMIN" || role === "RECEPTIONIST";
+            const canSendSms = role === "ADMIN" || role === "RECEPTIONIST";
+            const canViewReports = role === "ADMIN";
+
+            const items: Array<{ label: string; href: string; icon: React.ReactNode }> = [];
+
+            if (canRegisterPatient) {
+              items.push({
+                label: "Register Patient",
+                href: "/patients/new",
+                icon: (
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                ),
+              });
+            }
+
+            if (canNewAppointment) {
+              items.push({
+                label: "New Appointment",
+                href: "/appointments/new",
+                icon: (
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z" />
+                  </svg>
+                ),
+              });
+            }
+
+            if (canSendSms) {
+              items.push({
+                label: "Send SMS Reminder",
+                href: "/sms",
+                icon: (
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M22 12h-4l-2 2H2l2-2 2-2h4l2-2h4l2 2z" />
+                  </svg>
+                ),
+              });
+            }
+
+            if (canViewReports) {
+              items.push({
+                label: "View Reports",
+                href: "/reports",
+                icon: (
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M14 19V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z" />
+                  </svg>
+                ),
+              });
+            }
+
+            return items.map(({ label, href, icon }) => (
+              <Link
+                key={href}
+                href={href}
+                className="group rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-700 ring-1 ring-blue-100 group-hover:bg-blue-100 transition-colors">
+                    {icon}
+                  </span>
+                  <span className="text-sm sm:text-base font-semibold text-slate-900">{label}</span>
+                </div>
+              </Link>
+            ));
+          })()}
         </div>
       </div>
 

@@ -74,6 +74,7 @@ export default function PatientsPage() {
   const totalPages = Math.ceil(total / limit);
 
   const canRegisterPatient = role === "ADMIN" || role === "RECEPTIONIST";
+  const canEditPatient = role === "ADMIN" || role === "RECEPTIONIST";
   const canDeletePatient = role === "ADMIN";
 
   return (

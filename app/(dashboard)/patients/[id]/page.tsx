@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+
+type Role = "ADMIN" | "RECEPTIONIST" | "NURSE" | "DOCTOR";
+
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/Header";
@@ -38,6 +41,8 @@ type Patient = {
 };
 
 export default function PatientDetailPage() {
+  const [role, setRole] = useState<Role | null>(null);
+
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [patient, setPatient] = useState<Patient | null>(null);
@@ -46,6 +51,23 @@ export default function PatientDetailPage() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ fullName: "", gender: "", phoneNumber: "", address: "", dateOfBirth: "" });
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      const res = await fetch("/api/auth/me", { credentials: "include" });
+      if (!res.ok) {
+        setRole(null);
+        return;
+      }
+      const session = (await res.json()) as { role?: string };
+      const detected = (session?.role ?? "ANONYMOUS").trim().toUpperCase();
+      if (detected === "ADMIN" || detected === "RECEPTIONIST" || detected === "NURSE" || detected === "DOCTOR") {
+        setRole(detected as Role);
+      } else {
+        setRole(null);
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     fetch(`/api/patients/${id}`)
@@ -88,6 +110,11 @@ export default function PatientDetailPage() {
   if (loading) return <div className="py-20 text-center text-sm text-slate-400">Loading…</div>;
   if (!patient) return <div className="py-20 text-center text-sm text-slate-400">Patient not found.</div>;
 
+  const canEditPatient = role === "ADMIN" || role === "RECEPTIONIST";
+  const canDeletePatient = role === "ADMIN";
+  const canScheduleAppointment = role === "ADMIN";
+  const showSmsHistory = false;
+
   return (
     <div>
       <PageHeader
@@ -95,13 +122,19 @@ export default function PatientDetailPage() {
         description={`Patient ID: #${patient.id} · Registered ${formatDate(patient.createdAt)}`}
         action={
           <div className="flex gap-2">
-            <Link href={`/appointments/new?patientId=${patient.id}`}>
-              <Button size="sm" variant="secondary">Schedule Appointment</Button>
-            </Link>
-            <Button size="sm" onClick={() => setEditing(!editing)}>
-              {editing ? "Cancel Edit" : "Edit"}
-            </Button>
-            <Button size="sm" variant="danger" onClick={handleDelete}>Delete</Button>
+            {canScheduleAppointment && (
+              <Link href={`/appointments/new?patientId=${patient.id}`}>
+                <Button size="sm" variant="secondary">Schedule Appointment</Button>
+              </Link>
+            )}
+            {canEditPatient && (
+              <Button size="sm" onClick={() => setEditing(!editing)}>
+                {editing ? "Cancel Edit" : "Edit"}
+              </Button>
+            )}
+            {canDeletePatient && (
+              <Button size="sm" variant="danger" onClick={handleDelete}>Delete</Button>
+            )}
           </div>
         }
       />
@@ -150,7 +183,9 @@ export default function PatientDetailPage() {
           <div className="rounded-xl bg-white ring-1 ring-slate-200 shadow-sm overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
               <h3 className="text-sm font-semibold text-slate-900">Appointments ({patient.appointments.length})</h3>
-              <Link href={`/appointments/new?patientId=${patient.id}`} className="text-xs font-medium text-blue-600 hover:underline">+ New</Link>
+              {canScheduleAppointment && (
+                <Link href={`/appointments/new?patientId=${patient.id}`} className="text-xs font-medium text-blue-600 hover:underline">+ New</Link>
+              )}
             </div>
             {patient.appointments.length === 0 ? (
               <p className="py-8 text-center text-sm text-slate-400">No appointments yet.</p>
@@ -169,10 +204,11 @@ export default function PatientDetailPage() {
             )}
           </div>
 
-          <div className="rounded-xl bg-white ring-1 ring-slate-200 shadow-sm overflow-hidden">
-            <div className="border-b border-slate-100 px-5 py-4">
-              <h3 className="text-sm font-semibold text-slate-900">SMS History ({patient.smsLogs.length})</h3>
-            </div>
+          {showSmsHistory && (
+            <div className="rounded-xl bg-white ring-1 ring-slate-200 shadow-sm overflow-hidden">
+              <div className="border-b border-slate-100 px-5 py-4">
+                <h3 className="text-sm font-semibold text-slate-900">SMS History ({patient.smsLogs.length})</h3>
+              </div>
             {patient.smsLogs.length === 0 ? (
               <p className="py-8 text-center text-sm text-slate-400">No SMS sent yet.</p>
             ) : (

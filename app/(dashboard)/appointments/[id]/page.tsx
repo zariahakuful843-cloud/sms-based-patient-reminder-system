@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/Button";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 
+type Role = "ADMIN" | "RECEPTIONIST" | "NURSE" | "DOCTOR";
+
 type Appointment = {
   id: number;
   doctorName: string;
@@ -18,10 +20,13 @@ type Appointment = {
   patient: { id: number; fullName: string; phoneNumber: string };
 };
 
-export default function EditAppointmentPage() {
+export default function AppointmentDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+
+  const [role, setRole] = useState<Role | null>(null);
   const [appt, setAppt] = useState<Appointment | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -35,6 +40,24 @@ export default function EditAppointmentPage() {
   });
 
   useEffect(() => {
+    (async () => {
+      const res = await fetch("/api/auth/me", { credentials: "include" });
+      if (!res.ok) {
+        setRole(null);
+        return;
+      }
+      const session = (await res.json()) as { role?: string };
+      const detected = (session?.role ?? "ANONYMOUS").trim().toUpperCase();
+      if (detected === "ADMIN" || detected === "RECEPTIONIST" || detected === "NURSE" || detected === "DOCTOR") {
+        setRole(detected as Role);
+      } else {
+        setRole(null);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!id) return;
     fetch(`/api/appointments/${id}`)
       .then((r) => r.json())
       .then((data) => {
@@ -51,6 +74,12 @@ export default function EditAppointmentPage() {
       });
   }, [id]);
 
+  const canUpdateAppointment = role === "ADMIN" || role === "RECEPTIONIST";
+  const canDeleteAppointment = role === "ADMIN";
+  const canUpdateStatus = role === "ADMIN" || role === "RECEPTIONIST" || role === "NURSE";
+  const canEditConsultationNotes = role === "ADMIN" || role === "DOCTOR";
+  const canSave = Boolean(canUpdateAppointment || canUpdateStatus || canEditConsultationNotes);
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -58,16 +87,27 @@ export default function EditAppointmentPage() {
 
     const appointmentDate = new Date(`${form.appointmentDate}T${form.appointmentTime}`).toISOString();
 
+    const payload = {
+      doctorName: form.doctorName,
+      appointmentDate,
+      status: canUpdateStatus ? form.status : appt?.status,
+      notes: canEditConsultationNotes ? form.notes : appt?.notes,
+    };
+
     const res = await fetch(`/api/appointments/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, appointmentDate }),
+      body: JSON.stringify(payload),
     });
 
     const data = await res.json();
     setSaving(false);
 
-    if (!res.ok) { setError(data.error); return; }
+    if (!res.ok) {
+      setError(data.error ?? "Failed to update appointment.");
+      return;
+    }
+
     router.push("/appointments");
   }
 
@@ -80,15 +120,22 @@ export default function EditAppointmentPage() {
   if (loading) return <div className="py-20 text-center text-sm text-slate-400">Loading…</div>;
   if (!appt) return <div className="py-20 text-center text-sm text-slate-400">Appointment not found.</div>;
 
+  const canShowStatusField = canUpdateStatus;
+  const canShowDoctorField = role !== "DOCTOR";
+
   return (
     <div>
       <PageHeader
-        title="Edit Appointment"
+        title="Appointment"
         description={`For ${appt.patient.fullName}`}
         action={
           <div className="flex gap-2">
-            <Link href="/appointments"><Button variant="secondary" size="sm">Back</Button></Link>
-            <Button variant="danger" size="sm" onClick={handleDelete}>Delete</Button>
+            <Link href="/appointments">
+              <Button variant="secondary" size="sm">Back</Button>
+            </Link>
+            {canDeleteAppointment && (
+              <Button variant="danger" size="sm" onClick={handleDelete}>Delete</Button>
+            )}
           </div>
         }
       />
@@ -106,13 +153,16 @@ export default function EditAppointmentPage() {
             <Badge status={appt.status} />
           </div>
 
-          <Input
-            id="doctorName"
-            label="Doctor / Clinician"
-            required
-            value={form.doctorName}
-            onChange={(e) => setForm({ ...form, doctorName: e.target.value })}
-          />
+          {canShowDoctorField && (
+            <Input
+              id="doctorName"
+              label="Doctor / Clinician"
+              required={role === "ADMIN" || role === "RECEPTIONIST"}
+              value={form.doctorName}
+              onChange={(e) => setForm({ ...form, doctorName: e.target.value })}
+              disabled={!canUpdateAppointment}
+            />
+          )}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
@@ -122,6 +172,7 @@ export default function EditAppointmentPage() {
               required
               value={form.appointmentDate}
               onChange={(e) => setForm({ ...form, appointmentDate: e.target.value })}
+              disabled={!canUpdateAppointment}
             />
             <Input
               id="time"
@@ -130,38 +181,52 @@ export default function EditAppointmentPage() {
               required
               value={form.appointmentTime}
               onChange={(e) => setForm({ ...form, appointmentTime: e.target.value })}
+              disabled={!canUpdateAppointment}
             />
           </div>
 
-          <Select
-            id="status"
-            label="Status"
-            value={form.status}
-            onChange={(e) => setForm({ ...form, status: e.target.value })}
-            options={[
-              { value: "SCHEDULED", label: "Scheduled" },
-              { value: "COMPLETED", label: "Completed" },
-              { value: "CANCELLED", label: "Cancelled" },
-              { value: "MISSED", label: "Missed" },
-            ]}
-          />
+          {canShowStatusField ? (
+            <Select
+              id="status"
+              label="Status"
+              value={form.status}
+              onChange={(e) => setForm({ ...form, status: e.target.value })}
+              options={[
+                { value: "SCHEDULED", label: "Scheduled" },
+                { value: "COMPLETED", label: "Completed" },
+                { value: "CANCELLED", label: "Cancelled" },
+                { value: "MISSED", label: "Missed" },
+              ]}
+            />
+          ) : (
+            <Input id="status" label="Status" value={appt.status} disabled />
+          )}
 
+          {/* Consultation notes */}
           <Textarea
             id="notes"
-            label="Notes"
-            rows={3}
+            label="Consultation Notes"
+            rows={4}
             value={form.notes}
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            disabled={!canEditConsultationNotes}
           />
 
           {error && <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
           <div className="flex gap-3">
-            <Button type="submit" loading={saving}>Save Changes</Button>
-            <Link href="/appointments"><Button type="button" variant="secondary">Cancel</Button></Link>
+            {canSave && (
+              <Button type="submit" loading={saving}>
+                Save Changes
+              </Button>
+            )}
+            <Link href="/appointments">
+              <Button type="button" variant="secondary">Cancel</Button>
+            </Link>
           </div>
         </form>
       </div>
     </div>
   );
 }
+

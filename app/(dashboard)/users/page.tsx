@@ -24,6 +24,8 @@ export default function UsersPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const [myRole, setMyRole] = useState<string | null>(null);
+
   const [form, setForm] = useState({
     name: "", username: "", email: "", password: "", role: "RECEPTIONIST",
   });
@@ -35,7 +37,20 @@ export default function UsersPage() {
       .then((d) => { setUsers(Array.isArray(d) ? d : []); setLoading(false); });
   }
 
-  useEffect(() => { fetchUsers(); }, []);
+  useEffect(() => {
+    (async () => {
+      const res = await fetch("/api/auth/me", { credentials: "include" });
+      if (!res.ok) return;
+      const session = (await res.json()) as { role?: string };
+      setMyRole((session?.role ?? null) ? String(session?.role).toUpperCase() : null);
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (myRole === "ADMIN") fetchUsers();
+    else setLoading(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myRole]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -68,14 +83,14 @@ export default function UsersPage() {
       <PageHeader
         title="User Management"
         description="Manage staff accounts and roles"
-        action={
+        action={myRole === "ADMIN" ? (
           <Button size="sm" onClick={() => { setShowForm(!showForm); setSuccess(""); setError(""); }}>
             {showForm ? "Cancel" : "Add User"}
           </Button>
-        }
+        ) : null}
       />
 
-      {showForm && (
+      {showForm && myRole === "ADMIN" && (
         <div className="mb-6 max-w-xl rounded-xl bg-white ring-1 ring-slate-200 shadow-sm p-6">
           <h3 className="mb-4 text-sm font-semibold text-slate-900">Create New Staff Account</h3>
           <form onSubmit={handleCreate} className="space-y-4">
@@ -89,9 +104,10 @@ export default function UsersPage() {
               value={form.role}
               onChange={(e) => setForm({ ...form, role: e.target.value })}
               options={[
-                { value: "ADMIN", label: "Administrator" },
+                { value: "ADMIN", label: "Admin" },
                 { value: "RECEPTIONIST", label: "Receptionist" },
-                { value: "DOCTOR", label: "Doctor / Nurse" },
+                { value: "DOCTOR", label: "Doctor" },
+                { value: "NURSE", label: "Nurse" },
               ]}
             />
             {error && <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
@@ -102,6 +118,7 @@ export default function UsersPage() {
           </form>
         </div>
       )}
+
 
       {success && (
         <div className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700 ring-1 ring-emerald-200">
@@ -141,12 +158,16 @@ export default function UsersPage() {
                 </td>
                 <td className="px-4 py-3 text-slate-400">{formatDate(u.createdAt)}</td>
                 <td className="px-4 py-3">
-                  <button
-                    onClick={() => handleDelete(u.id, u.name)}
-                    className="rounded-md px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
-                  >
-                    Delete
-                  </button>
+                  {myRole === "ADMIN" ? (
+                    <button
+                      onClick={() => handleDelete(u.id, u.name)}
+                      className="rounded-md px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
+                    >
+                      Delete
+                    </button>
+                  ) : (
+                    <span />
+                  )}
                 </td>
               </tr>
             ))}
