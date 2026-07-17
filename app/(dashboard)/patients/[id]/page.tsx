@@ -209,24 +209,26 @@ export default function PatientDetailPage() {
               <div className="border-b border-slate-100 px-5 py-4">
                 <h3 className="text-sm font-semibold text-slate-900">SMS History ({patient.smsLogs.length})</h3>
               </div>
-            {patient.smsLogs.length === 0 ? (
-              <p className="py-8 text-center text-sm text-slate-400">No SMS sent yet.</p>
-            ) : (
-              <ul className="divide-y divide-slate-100">
-                {patient.smsLogs.map((s) => (
-                  <li key={s.id} className="px-5 py-3">
-                    <div className="flex items-start justify-between gap-4">
-                      <p className="text-sm text-slate-700 flex-1">{s.message}</p>
-                      <div className="shrink-0 text-right">
-                        <Badge status={s.status} />
-                        <p className="mt-1 text-xs text-slate-400">{formatDateTime(s.sentAt)}</p>
+
+              {patient.smsLogs.length === 0 ? (
+                <p className="py-8 text-center text-sm text-slate-400">No SMS sent yet.</p>
+              ) : (
+                <ul className="divide-y divide-slate-100">
+                  {patient.smsLogs.map((s) => (
+                    <li key={s.id} className="px-5 py-3">
+                      <div className="flex items-start justify-between gap-4">
+                        <p className="text-sm text-slate-700 flex-1">{s.message}</p>
+                        <div className="shrink-0 text-right">
+                          <Badge status={s.status} />
+                          <p className="mt-1 text-xs text-slate-400">{formatDateTime(s.sentAt)}</p>
+                        </div>
                       </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
