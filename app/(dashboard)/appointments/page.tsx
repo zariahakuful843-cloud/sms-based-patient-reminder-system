@@ -96,7 +96,8 @@ export default function AppointmentsPage() {
   const canDeleteAppointment = role === "ADMIN";
 
   const canUpdateStatus = role === "ADMIN" || role === "RECEPTIONIST" || role === "NURSE";
-  const showStatusSelect = canUpdateStatus && role !== "DOCTOR";
+  const showStatusSelect = canUpdateStatus;
+
 
   // Per RBAC matrix: all roles (ADMIN/RECEPTIONIST/NURSE/DOCTOR) can view appointment date/doctor info in the list.
   const showAppointmentDate = true;
