@@ -1,9 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-const SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET ?? "fallback-secret-change-in-production"
-);
+function getSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret.length < 32) {
+    throw new Error(
+      "JWT_SECRET environment variable must be set to a strong value of at least 32 characters."
+    );
+  }
+  return new TextEncoder().encode(secret);
+}
 
 const PUBLIC_PATHS = ["/login", "/api/auth/login"];
 
@@ -26,7 +32,7 @@ export async function proxy(request: NextRequest) {
   }
 
   try {
-    const { payload } = await jwtVerify(token, SECRET);
+    const { payload } = await jwtVerify(token, getSecret());
 
     const adminOnlyPaths = ["/settings", "/users"];
     if (adminOnlyPaths.some((p) => pathname.startsWith(p)) && payload.role !== "ADMIN") {
