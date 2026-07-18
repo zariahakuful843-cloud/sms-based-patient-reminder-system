@@ -194,7 +194,7 @@ export default function PatientDetailPage() {
                 {patient.appointments.map((a) => (
                   <li key={a.id} className="flex items-center justify-between px-5 py-3">
                     <div>
-                      <p className="text-sm font-medium text-slate-900">Dr. {a.doctorName}</p>
+                      <p className="text-sm font-medium text-slate-900">{(() => { const dn = (a.doctorName ?? "").trim(); const noPrefix = dn.replace(/^\s*dr\.\s*/i, ""); return `Dr. ${noPrefix}`.trim(); })()}</p>
                       <p className="text-xs text-slate-500">{formatDateTime(a.appointmentDate)}</p>
                     </div>
                     <Badge status={a.status} />

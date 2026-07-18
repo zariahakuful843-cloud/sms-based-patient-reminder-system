@@ -102,8 +102,10 @@ export default function AppointmentsPage() {
 
   function formatDoctorName(doctorName: string) {
     const dn = (doctorName ?? "").trim();
-    return dn.toLowerCase().startsWith("dr.") ? dn : `Dr. ${dn}`;
+    const nameWithoutPrefix = dn.replace(/^\s*dr\.\s*/i, "");
+    return `Dr. ${nameWithoutPrefix}`.trim();
   }
+
 
   function appointmentActions(aId: number) {
     const isAdmin = role === "ADMIN";
@@ -252,7 +254,8 @@ export default function AppointmentsPage() {
                     <p className="text-xs text-slate-400">{a.patient.phoneNumber}</p>
                   </td>
 
-                  <td className="px-4 py-3 text-slate-700">{formatDoctorName(a.doctorName)}</td>
+                  <td className="px-4 py-3 text-slate-700">{(() => { const dn = (a.doctorName ?? "").trim(); const noPrefix = dn.replace(/^\s*dr\.\s*/i, ""); return `Dr. ${noPrefix}`.trim(); })()}</td>
+
                   <td className="px-4 py-3 text-slate-700">{formatDateTime(a.appointmentDate)}</td>
 
                   <td className="px-4 py-3">
