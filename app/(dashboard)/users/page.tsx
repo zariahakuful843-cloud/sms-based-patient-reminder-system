@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/layout/Header";
 import { Button } from "@/components/ui/Button";
@@ -153,18 +154,42 @@ export default function UsersPage() {
                 <td className="px-4 py-3">
                   <Badge
                     status={u.role}
-                    label={u.role === "ADMIN" ? "Admin" : u.role === "RECEPTIONIST" ? "Receptionist" : "Doctor/Nurse"}
+                    label={
+                      u.role === "ADMIN"
+                        ? "Admin"
+                        : u.role === "RECEPTIONIST"
+                          ? "Receptionist"
+                          : u.role === "DOCTOR"
+                            ? "Doctor"
+                            : u.role === "NURSE"
+                              ? "Nurse"
+                              : u.role
+                    }
                   />
                 </td>
                 <td className="px-4 py-3 text-slate-400">{formatDate(u.createdAt)}</td>
                 <td className="px-4 py-3">
                   {myRole === "ADMIN" ? (
-                    <button
-                      onClick={() => handleDelete(u.id, u.name)}
-                      className="rounded-md px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
-                    >
-                      Delete
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/users/${u.id}`}
+                        className="rounded-md px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
+                      >
+                        View
+                      </Link>
+                      <Link
+                        href={`/users/${u.id}/edit`}
+                        className="rounded-md px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
+                      >
+                        Edit
+                      </Link>
+                      <button
+                        onClick={() => handleDelete(u.id, u.name)}
+                        className="rounded-md px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   ) : (
                     <span />
                   )}

@@ -98,12 +98,74 @@ export default function AppointmentsPage() {
   const canUpdateStatus = role === "ADMIN" || role === "RECEPTIONIST" || role === "NURSE";
   const showStatusSelect = canUpdateStatus;
 
-
-  // Per RBAC matrix: all roles (ADMIN/RECEPTIONIST/NURSE/DOCTOR) can view appointment date/doctor info in the list.
-  const showAppointmentDate = true;
-  const showDoctorColumn = true;
-
   const showNewAppointment = canCreateAppointment;
+
+  function formatDoctorName(doctorName: string) {
+    const dn = (doctorName ?? "").trim();
+    return dn.toLowerCase().startsWith("dr.") ? dn : `Dr. ${dn}`;
+  }
+
+  function appointmentActions(aId: number) {
+    const isAdmin = role === "ADMIN";
+    const isReceptionist = role === "RECEPTIONIST";
+    const isNurse = role === "NURSE";
+    const isDoctor = role === "DOCTOR";
+
+    const canView = Boolean(role);
+    const canEdit = (isAdmin || isReceptionist) && !isDoctor;
+    const canDelete = isAdmin;
+
+    const actions: React.ReactNode[] = [];
+
+    if (canView) {
+      actions.push(
+        <Link
+          key="view"
+          href={`/appointments/${aId}`}
+          className="rounded-md px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
+        >
+          {isDoctor ? "Open" : "View"}
+        </Link>
+      );
+    }
+
+    if (canEdit) {
+      actions.push(
+        <Link
+          key="edit"
+          href={`/appointments/${aId}`}
+          className="rounded-md px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
+        >
+          Edit
+        </Link>
+      );
+    }
+
+    if (canDelete) {
+      actions.push(
+        <button
+          key="delete"
+          onClick={() => handleDelete(aId)}
+          className="rounded-md px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
+        >
+          Delete
+        </button>
+      );
+    }
+
+    if (actions.length === 0) {
+      actions.push(
+        <span
+          key="fallback"
+          className="cursor-not-allowed rounded-md px-2.5 py-1 text-xs font-medium text-slate-400 bg-slate-50 ring-1 ring-slate-200"
+        >
+          View
+        </span>
+      );
+    }
+
+    return actions;
+  }
 
   return (
     <div>
@@ -157,16 +219,9 @@ export default function AppointmentsPage() {
         <table className="min-w-full text-sm">
           <thead className="bg-slate-50">
             <tr>
-              {showDoctorColumn && (
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Patient</th>
-              )}
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Patient</th>
-              {showDoctorColumn && (
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Doctor</th>
-              )}
-              {showAppointmentDate && (
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Date &amp; Time</th>
-              )}
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Doctor</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Date &amp; Time</th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Reminder</th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
@@ -197,10 +252,8 @@ export default function AppointmentsPage() {
                     <p className="text-xs text-slate-400">{a.patient.phoneNumber}</p>
                   </td>
 
-                  {showDoctorColumn && <td className="px-4 py-3 text-slate-700">Dr. {a.doctorName}</td>}
-                  {showAppointmentDate && (
-                    <td className="px-4 py-3 text-slate-700">{formatDateTime(a.appointmentDate)}</td>
-                  )}
+                  <td className="px-4 py-3 text-slate-700">{formatDoctorName(a.doctorName)}</td>
+                  <td className="px-4 py-3 text-slate-700">{formatDateTime(a.appointmentDate)}</td>
 
                   <td className="px-4 py-3">
                     {showStatusSelect ? (
@@ -227,35 +280,7 @@ export default function AppointmentsPage() {
                   </td>
 
                   <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      {/* View/Edit: list directs to appointment details always; edit UI is enforced in details page */}
-                      {role && (
-                        <Link
-                          href={`/appointments/${a.id}`}
-                          className="rounded-md px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
-                        >
-                          View
-                        </Link>
-                      )}
-
-                      {canEditAppointment && (
-                        <Link
-                          href={`/appointments/${a.id}`}
-                          className="rounded-md px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
-                        >
-                          Edit
-                        </Link>
-                      )}
-
-                      {canDeleteAppointment && (
-                        <button
-                          onClick={() => handleDelete(a.id)}
-                          className="rounded-md px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
-                        >
-                          Delete
-                        </button>
-                      )}
-                    </div>
+                    <div className="flex gap-2">{appointmentActions(a.id)}</div>
                   </td>
                 </tr>
               ))
