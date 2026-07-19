@@ -31,7 +31,10 @@ export default function UserViewPage() {
 
     fetch(`/api/users/${id}`)
       .then(async (r) => {
-        if (!r.ok) throw new Error("Failed to fetch user");
+        if (!r.ok) {
+          const data = await r.json().catch(() => null);
+          throw new Error(data?.error ?? `Failed to fetch user (${r.status})`);
+        }
         return r.json();
       })
       .then((data) => {

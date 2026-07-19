@@ -135,7 +135,7 @@ export default function AppointmentsPage() {
       actions.push(
         <Link
           key="edit"
-          href={`/appointments/${aId}`}
+          href={`/appointments/${aId}/edit`}
           className="rounded-md px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
         >
           Edit
