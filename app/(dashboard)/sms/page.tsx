@@ -234,13 +234,19 @@ export default function SMSPage() {
     } catch (err: any) { setError(err.message || "Failed to deploy broadcast."); } finally { setBusy(false); }
   };
 
-  const handleDeleteScheduledReminder = async (id: number) => {
+    const handleDeleteScheduledReminder = async (id: number) => {
     if (!confirm("Are you sure you want to cancel this scheduled reminder?")) return;
     try {
       const res = await fetch(`/api/sms/scheduled/${id}`, { method: "DELETE" });
-      if (res.ok) { setSuccess("Scheduled reminder cancelled cleanly."); fetchScheduledRemindersData(); }
-    } catch { setError("Failed to cancel scheduled task."); }
+      if (res.ok) { 
+        setSuccess("Scheduled reminder cancelled cleanly."); 
+        fetchScheduledRemindersData(); 
+      }
+    } catch { 
+      setError("Failed to cancel scheduled task."); 
+    }
   };
+
 
   return (
     <div className="space-y-6 p-4 sm:p-6 bg-slate-50/50 min-h-screen">
