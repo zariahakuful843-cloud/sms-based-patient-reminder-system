@@ -194,7 +194,6 @@ export default function SMSPage() {
       medicationName: singleForm.medicationName,
     });
   }, [singleForm, activePatientName]);
-
   const handleSendSingleSMS = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!singleForm.patientId) return;
@@ -215,8 +214,7 @@ export default function SMSPage() {
     } catch (err: any) { setError(err.message || "Failed to submit request."); } finally { setBusy(false); }
   };
 
-  // ... This is inside the big block above:
-const handleSendBulkSMS = async (e: React.FormEvent) => {
+  const handleSendBulkSMS = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!bulkMessage.trim()) return;
     setBusy(true); setError(""); setSuccess("");
@@ -234,5 +232,95 @@ const handleSendBulkSMS = async (e: React.FormEvent) => {
       setBulkMessage(""); setBulkIsScheduled(false); setBulkScheduleDateTime("");
     } catch (err: any) { setError(err.message || "Failed to deploy broadcast."); } finally { setBusy(false); }
   };
-// ... And then it moves straight on to handleDeleteScheduledReminder right below it!
 
+  const handleDeleteScheduledReminder = async (id: number) => {
+    if (!confirm("Are you sure you want to cancel this scheduled reminder?")) return;
+    try {
+      const res = await fetch(`/api/sms/scheduled/${id}`, { method: "DELETE" });
+      if (res.ok) { setSuccess("Scheduled reminder cancelled cleanly."); fetchScheduledRemindersData(); }
+    } catch { setError("Failed to cancel scheduled task."); }
+  };
+
+  return (
+    <div className="space-y-6 p-4 sm:p-6 bg-slate-50/50 min-h-screen">
+      <PageHeader title="SMS & Notifications Gateway" description="Manage templates, broadcasting lines, and background alerts." />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="rounded-xl border p-5 bg-white shadow-sm flex justify-between items-center">
+          <div><p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Dispatched SMS</p><p className="text-2xl font-bold text-gray-800 mt-1">{stats.sent}</p></div>
+          <div className="text-emerald-500 bg-emerald-50 p-2.5 rounded-lg text-lg">✓</div>
+        </div>
+        <div className="rounded-xl border p-5 bg-white shadow-sm flex justify-between items-center">
+          <div><p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Scheduled Tasks</p><p className="text-2xl font-bold text-gray-800 mt-1">{stats.scheduledCount}</p></div>
+          <div className="text-blue-500 bg-blue-50 p-2.5 rounded-lg text-lg">⏰</div>
+        </div>
+        <div className="rounded-xl border p-5 bg-white shadow-sm flex justify-between items-center">
+          <div><p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Delivery Failures</p><p className="text-2xl font-bold text-gray-800 mt-1">{stats.failed}</p></div>
+          <div className="text-red-500 bg-red-50 p-2.5 rounded-lg text-lg">⚠️</div>
+        </div>
+      </div>
+      {success && <div className="p-4 bg-emerald-50 text-emerald-700 text-sm font-medium rounded-lg border border-emerald-100">{success}</div>}
+      {error && <div className="p-4 bg-red-50 text-red-700 text-sm font-medium rounded-lg border border-red-100">{error}</div>}
+      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-2">
+        {(["single", "bulk", "history", "scheduled", "failed"] as const).map((t) => (
+          <button key={t} type="button" onClick={() => setTab(t)} className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 ${tab === t ? "border-blue-600 text-blue-600" : "border-transparent text-slate-400 hover:text-slate-800"}`}>
+            {t === "single" && "👤 Single SMS"}{t === "bulk" && "👥 Bulk Broadcast"}{t === "history" && "📋 Recent Activity"}{t === "scheduled" && "⏰ Future Scheduled"}{t === "failed" && "❌ Failures"}
+          </button>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          {tab === "single" && (
+            <Card className="bg-white shadow-sm border border-gray-100 rounded-xl">
+              <CardHeader className="p-5 font-bold text-gray-800 border-b border-gray-50">Configure Single Patient Reminder</CardHeader>
+              <CardContent className="p-6">
+                <form onSubmit={handleSendSingleSMS} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Select Patient *</label>
+                      <Select value={singleForm.patientId} onChange={(e) => handlePatientSelectChange(e.target.value)} required>
+                        <option value="">-- Choose Patient Contact --</option>
+                        {patients.map((p) => <option key={p.id} value={String(p.id)}>{p.fullName}</option>)}
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Target Phone Connection</label>
+                      <Input type="text" placeholder="Autofilled phone path..." value={singleForm.phoneNumber} onChange={(e) => setSingleForm(prev => ({ ...prev, phoneNumber: e.target.value }))} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Notification Category Template *</label>
+                    <Select value={singleForm.reminderType} onChange={(e) => setSingleForm(prev => ({ ...prev, reminderType: e.target.value as ReminderTypeKey }))}>
+                      {REMINDER_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                    </Select>
+                  </div>
+                  {singleForm.reminderType === "APPOINTMENT_REMINDER" && (
+                    <div className="grid grid-cols-2 gap-4 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                      <div><label className="block text-[11px] text-gray-500 mb-1">Date</label><Input type="date" value={singleForm.appointmentDate} onChange={(e) => setSingleForm(prev => ({ ...prev, appointmentDate: e.target.value }))} /></div>
+                      <div><label className="block text-[11px] text-gray-500 mb-1">Time Window</label><Input type="time" value={singleForm.appointmentTime} onChange={(e) => setSingleForm(prev => ({ ...prev, appointmentTime: e.target.value }))} /></div>
+                    </div>
+                  )}
+                  {singleForm.reminderType === "MEDICATION_REMINDER" && (
+                    <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                      <label className="block text-[11px] text-gray-500 mb-1">Prescription Medication Details</label>
+                      <Input type="text" placeholder="e.g., Amoxicillin 500mg" value={singleForm.medicationName} onChange={(e) => setSingleForm(prev => ({ ...prev, medicationName: e.target.value }))} />
+                    </div>
+                  )}
+                  {singleForm.reminderType === "VACCINATION_REMINDER" && (
+                    <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                      <label className="block text-[11px] text-gray-500 mb-1">Target Immunization Release Date</label>
+                      <Input type="date" value={singleForm.vaccinationDate} onChange={(e) => setSingleForm(prev => ({ ...prev, vaccinationDate: e.target.value }))} />
+                    </div>
+                  )}
+                  <div className="border border-slate-100 rounded-lg p-3 bg-slate-50/50 space-y-3">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-700 select-none">
+                      <input type="checkbox" checked={singleForm.isScheduled} onChange={(e) => setSingleForm(prev => ({ ...prev, isScheduled: e.target.checked }))} className="rounded accent-blue-600 h-4 w-4" />
+                      Decline instant dispatch, schedule for future delivery
+                    </label>
+                    {singleForm.isScheduled && (
+                      <div>
+                        <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Target Execution Release Time</label>
+                        <Input type="datetime-local" value={singleForm.scheduleDateTime} onChange={(e) => setSingleForm(prev => ({ ...prev, scheduleDateTime: e.target.value }))} required={singleForm.isScheduled} />
+                      </div>
+                    )}
+                  </div>
+                  <Button type="submit" disabled={busy} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg text-xs tracking-wider uppercase">
