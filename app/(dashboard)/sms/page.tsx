@@ -331,3 +331,117 @@ export default function SMSPage() {
                     )}
                   </div>
                   <Button type="submit" disabled={busy} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg text-xs tracking-wider uppercase">
+                              {tab === "bulk" && (
+            <Card className="bg-white shadow-sm border border-gray-100 rounded-xl">
+              <CardHeader className="p-5 font-bold text-gray-800 border-b border-gray-50">Broadcast Bulk Hospital SMS Alert Campaign</CardHeader>
+              <CardContent className="p-6">
+                <form onSubmit={handleSendBulkSMS} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Target Notification Context Category</label>
+                    <Select value={bulkReminderType} onChange={(e) => setBulkReminderType(e.target.value as ReminderTypeKey)}>
+                      {REMINDER_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Message Body Content *</label>
+                    <Textarea value={bulkMessage} onChange={(e) => setBulkMessage(e.target.value)} placeholder="Type out custom transmission text strings..." className="h-32 resize-none" required />
+                  </div>
+                  <div className="border border-slate-100 rounded-lg p-3 bg-slate-50/50 space-y-3">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-700 select-none">
+                      <input type="checkbox" checked={bulkIsScheduled} onChange={(e) => setBulkIsScheduled(e.target.checked)} className="rounded accent-blue-600 h-4 w-4" />
+                      Schedule bulk broadcast for future target window
+                    </label>
+                    {bulkIsScheduled && (
+                      <div>
+                        <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Target Release Delivery Execution Time</label>
+                        <Input type="datetime-local" value={bulkScheduleDateTime} onChange={(e) => setBulkScheduleDateTime(e.target.value)} required={bulkIsScheduled} />
+                      </div>
+                    )}
+                  </div>
+                  <Button type="submit" disabled={busy} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg text-xs tracking-wider uppercase">
+                    {busy ? "Processing Campaign Operations..." : bulkIsScheduled ? "⏰ Schedule Bulk Target Release" : "📢 Execute Immediate Global Broadcast"}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+          {(tab === "history" || tab === "failed") && (
+            <Card className="bg-white shadow-sm border border-gray-100 rounded-xl overflow-hidden">
+              <div className="p-4 bg-white border-b border-gray-50 flex items-center justify-between">
+                <Input type="text" placeholder="Search logs by patient name..." value={searchLogs} onChange={(e) => { setSearchLogs(e.target.value); setPage(1); }} className="max-w-xs text-xs" />
+                <span className="text-xs font-semibold text-gray-400">Total lines: {total}</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-gray-100">
+                      <th className="p-4">Patient Target</th><th className="p-4">Phone Connection</th><th className="p-4">Message Content Snippet</th><th className="p-4">Status</th><th className="p-4">Date Sent</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50 text-xs text-gray-700">
+                    {loadingLogs ? (<tr><td colSpan={5} className="p-8 text-center text-gray-400">Loading system logs...</td></tr>) : logs.length === 0 ? (<tr><td colSpan={5} className="p-8 text-center text-gray-400">No matching history records mapped.</td></tr>) : (
+                      logs.map((log) => (
+                        <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="p-4 font-semibold text-gray-900">{log.patientName || "Global Broadcast"}</td>
+                          <td className="p-4 text-gray-500">{log.phoneNumber}</td>
+                          <td className="p-4 text-gray-500 max-w-xs truncate">{log.message}</td>
+                          <td className="p-4"><Badge className={log.status === "SENT" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}>{log.status}</Badge></td>
+                          <td className="p-4 text-gray-400">{formatDateTime(log.sentAt)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
+          {tab === "scheduled" && (
+            <Card className="bg-white shadow-sm border border-gray-100 rounded-xl overflow-hidden">
+              <div className="p-4 bg-white border-b border-gray-50 flex items-center justify-between">
+                <Input type="text" placeholder="Search scheduled queues..." value={scheduledSearch} onChange={(e) => { setScheduledSearch(e.target.value); setScheduledPage(1); }} className="max-w-xs text-xs" />
+                <span className="text-xs font-semibold text-gray-400">Total queued: {scheduledTotal}</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-gray-100">
+                      <th className="p-4">Patient Target</th><th className="p-4">Phone Path</th><th className="p-4">Content Context</th><th className="p-4">Scheduled Release Time</th><th className="p-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50 text-xs text-gray-700">
+                    {loadingScheduled ? (<tr><td colSpan={5} className="p-8 text-center text-gray-400">Loading scheduled records...</td></tr>) : scheduled.length === 0 ? (<tr><td colSpan={5} className="p-8 text-center text-gray-400">No upcoming tasks queued.</td></tr>) : (
+                      scheduled.map((sch) => (
+                        <tr key={sch.id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="p-4 font-semibold text-gray-900">{sch.patientName}</td>
+                          <td className="p-4 text-gray-500">{sch.phoneNumber}</td>
+                          <td className="p-4 text-gray-500 max-w-xs truncate">{sch.message}</td>
+                          <td className="p-4 text-blue-600 font-medium">{formatDateTime(sch.scheduledAt)}</td>
+                          <td className="p-4 text-right"><button type="button" onClick={() => handleDeleteScheduledReminder(sch.id)} className="text-red-500 font-bold hover:text-red-700 text-xs px-2 py-1 rounded border border-red-100 hover:bg-red-50">Cancel</button></td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
+        </div>
+        <div className="space-y-6">
+          <Card className="bg-white border border-gray-100 shadow-sm rounded-xl sticky top-6">
+            <CardHeader className="p-5 font-bold text-gray-800 border-b border-gray-50">Live Output Tracker</CardHeader>
+            <CardContent className="p-6">
+              <div className="bg-blue-50/70 border border-blue-100 rounded-xl p-4 text-gray-700 min-h-[140px] flex flex-col justify-between">
+                <p className="text-xs leading-relaxed font-medium whitespace-pre-wrap">{tab === "single" ? calculatedLiveMessageString : bulkMessage || "Type into campaign fields to visualize..."}</p>
+                <div className="text-[10px] text-gray-400 border-t border-blue-100 pt-2.5 mt-4 flex justify-between font-bold uppercase">
+                  <span>Count: {tab === "single" ? calculatedLiveMessageString.length : bulkMessage.length} Chars</span>
+                  <span>Units: {Math.ceil((tab === "single" ? calculatedLiveMessageString.length : bulkMessage.length) / 160) || 0} SMS</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
