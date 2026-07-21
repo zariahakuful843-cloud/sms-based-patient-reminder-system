@@ -206,7 +206,7 @@ export default function SMSPage() {
       setTotal(data.total || 0);
     } catch (err) {
       console.error(err);
-    } finaly {
+    } finally {
       setLoadingLogs(false);
     }
   };
