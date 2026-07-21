@@ -51,32 +51,19 @@ const REMINDER_TYPES: { value: ReminderTypeKey; label: string }[] = [
 ];
 
 function toISODate(d: Date) {
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function toTimeValue(d: Date) {
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  return `${hh}:${mm}`;
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 function formatDate(d: Date) {
-  return d.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
 function formatTime(d: Date) {
-  return d.toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
+  return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: true });
 }
 
 function buildPreview(params: {
@@ -91,35 +78,23 @@ function buildPreview(params: {
   medicationName?: string;
 }): string {
   const name = params.patientName || "[Patient Name]";
-
   switch (params.reminderType) {
     case "APPOINTMENT_REMINDER": {
       const d = params.appointmentDate ?? new Date();
-      const time = params.appointmentTime ? params.appointmentTime : formatTime(d);
-      return `Dear ${name}, this is a reminder that you have an appointment on ${formatDate(d)} at ${time}. Please arrive 15 minutes early.`;
+      return `Dear ${name}, this is a reminder that you have an appointment on ${formatDate(d)} at ${params.appointmentTime || formatTime(d)}. Please arrive 15 minutes early.`;
     }
-    case "MEDICATION_REMINDER": {
-      const med = params.medicationName?.trim() || "your medication";
-      return `Dear ${name}, this is a reminder to take your medication: ${med}. Follow your prescribed dosage.`;
-    }
-    case "VACCINATION_REMINDER": {
-      const d = params.vaccinationDate ?? new Date();
-      return `Dear ${name}, your vaccination is scheduled for ${formatDate(d)}. Please visit the facility on time.`;
-    }
-    case "ANTENATAL_REMINDER": {
-      const d = params.antenatalDate ?? new Date();
-      return `Dear ${name}, this is a reminder for your antenatal visit on ${formatDate(d)}. We look forward to seeing you.`;
-    }
-    case "FOLLOW_UP_REMINDER": {
-      const d = params.followUpDate ?? new Date();
-      return `Dear ${name}, this is a reminder for your follow-up visit on ${formatDate(d)}. Please contact the facility if you need to reschedule.`;
-    }
-    case "LABORATORY_TEST_REMINDER": {
-      const d = params.laboratoryTestDate ?? new Date();
-      return `Dear ${name}, your laboratory test is scheduled for ${formatDate(d)}. Please arrive on time and follow any preparation instructions.`;
-    }
+    case "MEDICATION_REMINDER":
+      return `Dear ${name}, this is a reminder to take your medication: ${params.medicationName?.trim() || "your medication"}. Follow your prescribed dosage.`;
+    case "VACCINATION_REMINDER":
+      return `Dear ${name}, your vaccination is scheduled for ${formatDate(params.vaccinationDate ?? new Date())}. Please visit the facility on time.`;
+    case "ANTENATAL_REMINDER":
+      return `Dear ${name}, this is a reminder for your antenatal visit on ${formatDate(params.antenatalDate ?? new Date())}. We look forward to seeing you.`;
+    case "FOLLOW_UP_REMINDER":
+      return `Dear ${name}, this is a reminder for your follow-up visit on ${formatDate(params.followUpDate ?? new Date())}. Please contact the facility if you need to reschedule.`;
+    case "LABORATORY_TEST_REMINDER":
+      return `Dear ${name}, your laboratory test is scheduled for ${formatDate(params.laboratoryTestDate ?? new Date())}. Please arrive on time and follow preps.`;
     default:
-      return `Dear ${name}, this is a reminder.`;
+      return `Dear ${name}, this is a system notification reminder.`;
   }
 }
 
@@ -146,18 +121,10 @@ export default function SMSPage() {
   const [busy, setBusy] = useState(false);
 
   const [singleForm, setSingleForm] = useState({
-    patientId: "",
-    phoneNumber: "",
-    reminderType: "APPOINTMENT_REMINDER" as ReminderTypeKey,
-    appointmentDate: toISODate(new Date()),
-    appointmentTime: toTimeValue(new Date()),
-    medicationName: "",
-    vaccinationDate: toISODate(new Date()),
-    antenatalDate: toISODate(new Date()),
-    followUpDate: toISODate(new Date()),
-    laboratoryTestDate: toISODate(new Date()),
-    isScheduled: false,
-    scheduleDateTime: "",
+    patientId: "", phoneNumber: "", reminderType: "APPOINTMENT_REMINDER" as ReminderTypeKey,
+    appointmentDate: toISODate(new Date()), appointmentTime: toTimeValue(new Date()), medicationName: "",
+    vaccinationDate: toISODate(new Date()), antenatalDate: toISODate(new Date()), followUpDate: toISODate(new Date()),
+    laboratoryTestDate: toISODate(new Date()), isScheduled: false, scheduleDateTime: "",
   });
 
   const [bulkMessage, setBulkMessage] = useState("");
@@ -165,31 +132,10 @@ export default function SMSPage() {
   const [bulkIsScheduled, setBulkIsScheduled] = useState(false);
   const [bulkScheduleDateTime, setBulkScheduleDateTime] = useState("");
 
-  useEffect(() => {
-    async function initPageData() {
-      try {
-        const patientRes = await fetch("/api/patients");
-        const patientData = await patientRes.json();
-        if (Array.isArray(patientData)) setPatients(patientData);
-        else if (patientData && Array.isArray(patientData.data)) setPatients(patientData.data);
-
-        fetchAnalyticsSummary();
-        fetchLogDataHistory();
-        fetchScheduledRemindersData();
-      } catch (err) {
-        console.error("Initialization error:", err);
-      }
-    }
-    initPageData();
-  }, [tab, page, scheduledPage, searchLogs, scheduledSearch]);
-
   const fetchAnalyticsSummary = async () => {
     try {
       const res = await fetch("/api/sms/stats");
-      if (res.ok) {
-        const data = await res.json();
-        if (data) setStats(data);
-      }
+      if (res.ok) { const data = await res.json(); if (data) setStats(data); }
     } catch {
       setStats({ sent: logs.filter(l => l.status === "SENT").length, failed: logs.filter(l => l.status === "FAILED").length, scheduledCount: scheduled.length });
     }
@@ -204,11 +150,7 @@ export default function SMSPage() {
       const data = await res.json();
       setLogs(data.logs || []);
       setTotal(data.total || 0);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingLogs(false);
-    }
+    } catch (err) { console.error(err); } finally { setLoadingLogs(false); }
   };
 
   const fetchScheduledRemindersData = async () => {
@@ -218,27 +160,31 @@ export default function SMSPage() {
       const data = await res.json();
       setScheduled(data.scheduled || []);
       setScheduledTotal(data.total || 0);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingScheduled(false);
-    }
+    } catch (err) { console.error(err); } finally { setLoadingScheduled(false); }
   };
+
+  useEffect(() => {
+    async function initPageData() {
+      try {
+        const patientRes = await fetch("/api/patients");
+        const patientData = await patientRes.json();
+        if (Array.isArray(patientData)) setPatients(patientData);
+        else if (patientData && Array.isArray(patientData.data)) setPatients(patientData.data);
+        fetchAnalyticsSummary(); fetchLogDataHistory(); fetchScheduledRemindersData();
+      } catch (err) { console.error("Initialization error:", err); }
+    }
+    initPageData();
+  }, [tab, page, scheduledPage, searchLogs, scheduledSearch]);
 
   const handlePatientSelectChange = (id: string) => {
     const p = patients.find((pat) => String(pat.id) === id);
-    setSingleForm((prev) => ({
-      ...prev,
-      patientId: id,
-      phoneNumber: p ? p.phoneNumber : "",
-    }));
+    setSingleForm((prev) => ({ ...prev, patientId: id, phoneNumber: p ? p.phoneNumber : "" }));
   };
 
   const activePatientName = patients.find((p) => String(p.id) === singleForm.patientId)?.fullName || "";
   const calculatedLiveMessageString = useMemo(() => {
     return buildPreview({
-      reminderType: singleForm.reminderType,
-      patientName: activePatientName,
+      reminderType: singleForm.reminderType, patientName: activePatientName,
       appointmentDate: singleForm.appointmentDate ? new Date(singleForm.appointmentDate) : undefined,
       appointmentTime: singleForm.appointmentTime,
       vaccinationDate: singleForm.vaccinationDate ? new Date(singleForm.vaccinationDate) : undefined,
@@ -248,198 +194,45 @@ export default function SMSPage() {
       medicationName: singleForm.medicationName,
     });
   }, [singleForm, activePatientName]);
+
   const handleSendSingleSMS = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!singleForm.patientId) return;
-
-    setBusy(true);
-    setError("");
-    setSuccess("");
-
+    setBusy(true); setError(""); setSuccess("");
     try {
       const response = await fetch("/api/sms/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          mode: "single",
-          patientId: Number(singleForm.patientId),
-          message: calculatedLiveMessageString,
-          reminderType: singleForm.reminderType,
-          phoneNumber: singleForm.phoneNumber || undefined,
+          mode: "single", patientId: Number(singleForm.patientId), message: calculatedLiveMessageString,
+          reminderType: singleForm.reminderType, phoneNumber: singleForm.phoneNumber || undefined,
           scheduleTime: singleForm.isScheduled ? new Date(singleForm.scheduleDateTime).toISOString() : undefined,
         }),
       });
-
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Execution failed.");
-
       setSuccess(singleForm.isScheduled ? "SMS scheduled successfully!" : "SMS sent successfully!");
       setSingleForm((prev) => ({ ...prev, patientId: "", phoneNumber: "", isScheduled: false, scheduleDateTime: "" }));
-    } catch (err: any) {
-      setError(err.message || "Failed to submit request.");
-    } finally {
-      setBusy(false);
-    }
+    } catch (err: any) { setError(err.message || "Failed to submit request."); } finally { setBusy(false); }
   };
 
-  const handleSendBulkSMS = async (e: React.FormEvent) => {
+  // ... This is inside the big block above:
+const handleSendBulkSMS = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!bulkMessage.trim()) return;
-
-    setBusy(true);
-    setError("");
-    setSuccess("");
-
+    setBusy(true); setError(""); setSuccess("");
     try {
       const response = await fetch("/api/sms/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          mode: "bulk",
-          message: bulkMessage,
-          reminderType: bulkReminderType,
+          mode: "bulk", message: bulkMessage, reminderType: bulkReminderType,
           scheduleTime: bulkIsScheduled ? new Date(bulkScheduleDateTime).toISOString() : undefined,
         }),
       });
-
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Bulk process failed.");
-
       setSuccess(bulkIsScheduled ? "Bulk campaign scheduled!" : "Bulk messages dispatched successfully!");
-      setBulkMessage("");
-      setBulkIsScheduled(false);
-      setBulkScheduleDateTime("");
-    } catch (err: any) {
-      setError(err.message || "Failed to deploy broadcast.");
-    } finally {
-      setBusy(false);
-    }
+      setBulkMessage(""); setBulkIsScheduled(false); setBulkScheduleDateTime("");
+    } catch (err: any) { setError(err.message || "Failed to deploy broadcast."); } finally { setBusy(false); }
   };
+// ... And then it moves straight on to handleDeleteScheduledReminder right below it!
 
-  const handleDeleteScheduledReminder = async (id: number) => {
-    if (!confirm("Are you sure you want to cancel this scheduled reminder?")) return;
-    try {
-      const res = await fetch(`/api/sms/scheduled/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        setSuccess("Scheduled reminder cancelled cleanly.");
-        fetchScheduledRemindersData();
-      }
-    } catch {
-      setError("Failed to cancel scheduled task.");
-    }
-  };
-
-  return (
-    <div className="space-y-6 p-4 sm:p-6 bg-slate-50/50 min-h-screen">
-      <PageHeader title="SMS & Notifications Gateway" description="Manage patient interaction templates, text broadcasting lines, and automated background alerts." />
-
-      {/* METRIC ANALYSIS CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="rounded-xl border p-5 bg-white shadow-sm flex justify-between items-center">
-          <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Dispatched SMS</p>
-            <p className="text-2xl font-bold text-gray-800 mt-1">{stats.sent}</p>
-          </div>
-          <div className="text-emerald-500 bg-emerald-50 p-2.5 rounded-lg text-lg">✓</div>
-        </div>
-        <div className="rounded-xl border p-5 bg-white shadow-sm flex justify-between items-center">
-          <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Scheduled Tasks</p>
-            <p className="text-2xl font-bold text-gray-800 mt-1">{stats.scheduledCount}</p>
-          </div>
-          <div className="text-blue-500 bg-blue-50 p-2.5 rounded-lg text-lg">⏰</div>
-        </div>
-        <div className="rounded-xl border p-5 bg-white shadow-sm flex justify-between items-center">
-          <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Delivery Failures</p>
-            <p className="text-2xl font-bold text-gray-800 mt-1">{stats.failed}</p>
-          </div>
-          <div className="text-red-500 bg-red-50 p-2.5 rounded-lg text-lg">⚠️</div>
-        </div>
-      </div>
-
-      {/* REACTION BANNERS */}
-      {success && <div className="p-4 bg-emerald-50 text-emerald-700 text-sm font-medium rounded-lg border border-emerald-100">{success}</div>}
-      {error && <div className="p-4 bg-red-50 text-red-700 text-sm font-medium rounded-lg border border-red-100">{error}</div>}
-
-      {/* TABS SELECTOR */}
-      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-2">
-        {(["single", "bulk", "history", "scheduled", "failed"] as const).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setTab(t)}
-            className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${
-              tab === t ? "border-blue-600 text-blue-600" : "border-transparent text-slate-400 hover:text-slate-800"
-            }`}
-          >
-            {t === "single" && "👤 Single SMS"}
-            {t === "bulk" && "👥 Bulk Broadcast"}
-            {t === "history" && "📋 Recent Activity"}
-            {t === "scheduled" && "⏰ Future Scheduled"}
-            {t === "failed" && "❌ Failures"}
-          </button>
-        ))}
-      </div>
-
-      {/* ACTIVE WORKSPACE */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          
-          {tab === "single" && (
-            <Card className="bg-white shadow-sm border border-gray-100 rounded-xl">
-              <CardHeader className="p-5 font-bold text-gray-800 border-b border-gray-50">Configure Single Patient Reminder</CardHeader>
-              <CardContent className="p-6">
-                <form onSubmit={handleSendSingleSMS} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">Select Patient *</label>
-                      <Select value={singleForm.patientId} onChange={(e) => handlePatientSelectChange(e.target.value)} required>
-                        <option value="">-- Choose Patient Contact --</option>
-                        {patients.map((p) => <option key={p.id} value={p.id}>{p.fullName}</option>)}
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">Target Phone Connection</label>
-                      <Input type="text" placeholder="Autofilled phone path..." value={singleForm.phoneNumber} onChange={(e) => setSingleForm(prev => ({ ...prev, phoneNumber: e.target.value }))} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Notification Category Template *</label>
-                    <Select value={singleForm.reminderType} onChange={(e) => setSingleForm(prev => ({ ...prev, reminderType: e.target.value as ReminderTypeKey }))}>
-                      {REMINDER_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-                    </Select>
-                  </div>
-
-                  {singleForm.reminderType === "APPOINTMENT_REMINDER" && (
-                    <div className="grid grid-cols-2 gap-4 p-3 bg-slate-50 rounded-lg border border-slate-100">
-                      <div>
-                        <label className="block text-[11px] text-gray-500 mb-1">Date</label>
-                        <Input type="date" value={singleForm.appointmentDate} onChange={(e) => setSingleForm(prev => ({ ...prev, appointmentDate: e.target.value }))} />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] text-gray-500 mb-1">Time Window</label>
-                        <Input type="time" value={singleForm.appointmentTime} onChange={(e) => setSingleForm(prev => ({ ...prev, appointmentTime: e.target.value }))} />
-                      </div>
-                    </div>
-                  )}
-
-                  {singleForm.reminderType === "MEDICATION_REMINDER" && (
-                    <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                      <label className="block text-[11px] text-gray-500 mb-1">Prescription Medication Details</label>
-                      <Input type="text" placeholder="e.g., Amoxicillin 500mg" value={singleForm.medicationName} onChange={(e) => setSingleForm(prev => ({ ...prev, medicationName: e.target.value }))} />
-                    </div>
-                  )}
-
-                  {singleForm.reminderType === "VACCINATION_REMINDER" && (
-                    <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                      <label className="block text-[11px] text-gray-500 mb-1">Target Immunization Release Date</label>
-                      <Input type="date" value={singleForm.vaccinationDate} onChange={(e) => setSingleForm(prev => ({ ...prev, vaccinationDate: e.target.value }))} />
-                    </div>
-                  )}
-
-                  <div className="border border-slate-100 rounded-lg p-3 bg-slate-50/50 space-y-3">
-                    <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-700 select-none">
-                      <input type="checkbox" checked={singleForm.isScheduled} onChange={(e) => setSingleForm(prev => ({ ...prev, isScheduled: e.target.checked }))} className="rounded accent-blue-600 h-4 w-4" />
-                      Decline instant dispatch, schedule for future delivery
