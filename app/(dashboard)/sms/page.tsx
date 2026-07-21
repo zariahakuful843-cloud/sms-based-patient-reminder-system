@@ -181,19 +181,20 @@ export default function SMSPage() {
     setSingleForm((prev) => ({ ...prev, patientId: id, phoneNumber: p ? p.phoneNumber : "" }));
   };
 
-  const activePatientName = patients.find((p) => String(p.id) === singleForm.patientId)?.fullName || "";
-  const calculatedLiveMessageString = useMemo(() => {
-    return buildPreview({
-      reminderType: singleForm.reminderType, patientName: activePatientName,
-      appointmentDate: singleForm.appointmentDate ? new Date(singleForm.appointmentDate) : undefined,
-      appointmentTime: singleForm.appointmentTime,
-      vaccinationDate: singleForm.vaccinationDate ? new Date(singleForm.vaccinationDate) : undefined,
-      antenatalDate: singleForm.antenatalDate ? new Date(singleForm.antenatalDate) : undefined,
-      followUpDate: singleForm.followUpDate ? new Date(singleForm.followUpDate) : undefined,
-      laboratoryTestDate: singleForm.laboratoryTestDate ? new Date(singleForm.laboratoryTestDate) : undefined,
-      medicationName: singleForm.medicationName,
-    });
-  }, [singleForm, activePatientName]);
+    const activePatientName = patients.find((p) => String(p.id) === singleForm.patientId)?.fullName || "";
+    const calculatedLiveMessageString = useMemo(() => {
+       return buildPreview({
+          reminderType: singleForm.reminderType, patientName: activePatientName,
+          appointmentDate: singleForm.appointmentDate ? new Date(singleForm.appointmentDate) : undefined,
+          appointmentTime: singleForm.appointmentTime,
+          vaccinationDate: singleForm.vaccinationDate ? new Date(singleForm.vaccinationDate) : undefined,
+          antenatalDate: singleForm.antenatalDate ? new Date(singleForm.antenatalDate) : undefined,
+          followUpDate: singleForm.followUpDate ? new Date(singleForm.followUpDate) : undefined,
+          laboratoryTestDate: singleForm.laboratoryTestDate ? new Date(singleForm.laboratoryTestDate) : undefined,
+          medicationName: singleForm.medicationName,
+      });
+   }, [singleForm, activePatientName]);
+
   const handleSendSingleSMS = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!singleForm.patientId) return;
