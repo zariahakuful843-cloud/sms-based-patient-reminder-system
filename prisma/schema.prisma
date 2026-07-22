@@ -56,7 +56,6 @@ model SMSLog {
   reminderType   String
   message        String
   status         String   @default("PENDING")
-  errorMessage   String?
   sentAt         DateTime @default(now())
   patient        Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
 }
