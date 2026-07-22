@@ -36,11 +36,10 @@ Input.displayName = "Input";
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
   error?: string;
-  options: { value: string; label: string }[];
+  options?: { value: string; label: string }[];
 }
-
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ label, error, options, className, id, ...props }, ref) => (
+  ({ label, error, options, className, id, children, ...props }, ref) => (
     <div className="flex flex-col gap-1.5">
       {label && (
         <label htmlFor={id} className="text-sm font-medium text-slate-700">
@@ -60,18 +59,19 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         )}
         {...props}
       >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
+        {options
+          ? options.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))
+          : children}
       </select>
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
   )
 );
 Select.displayName = "Select";
-
 interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
   error?: string;
