@@ -258,15 +258,20 @@ export default function SMSPage() {
       <PageHeader title="SMS & Notifications Gateway" description="Manage templates, broadcasting lines, and background alerts." />
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="rounded-xl border p-5 bg-white shadow-sm flex justify-between items-center">
-          <div><p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Dispatched SMS</p><p className="text-2xl font-bold text-gray-800 mt-1">{stats.sent}</p></div>
-          <div className="text-emerald-500 bg-emerald-50 p-2.5 rounded-lg text-lg">✓</div>
+          <div><p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total SMS</p><p className="text-2xl font-bold text-gray-800 mt-1">{stats.total}</p></div>
+          <div className="text-emerald-500 bg-emerald-50 p-2.5 rounded-lg text-lg">📨</div>
         </div>
         <div className="rounded-xl border p-5 bg-white shadow-sm flex justify-between items-center">
-          <div><p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Scheduled Tasks</p><p className="text-2xl font-bold text-gray-800 mt-1">{stats.scheduledCount}</p></div>
+          <div><p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Sent</p><p className="text-2xl font-bold text-gray-800 mt-1">{stats.sent}</p></div>
+          <div className="text-red-500 bg-red-50 p-2.5 rounded-lg text-lg">✓</div>
+        </div>
+      </div>
+        <div className="rounded-xl border p-5 bg-white shadow-sm flex justify-between items-center">
+          <div><p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Pending</p><p className="text-2xl font-bold text-gray-800 mt-1">{stats.pending}</p></div>
           <div className="text-blue-500 bg-blue-50 p-2.5 rounded-lg text-lg">⏰</div>
         </div>
         <div className="rounded-xl border p-5 bg-white shadow-sm flex justify-between items-center">
-          <div><p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Delivery Failures</p><p className="text-2xl font-bold text-gray-800 mt-1">{stats.failed}</p></div>
+          <div><p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Failed</p><p className="text-2xl font-bold text-gray-800 mt-1">{stats.failed}</p></div>
           <div className="text-red-500 bg-red-50 p-2.5 rounded-lg text-lg">⚠️</div>
         </div>
       </div>
