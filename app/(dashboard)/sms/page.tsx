@@ -143,6 +143,7 @@ export default function SMSPage() {
              failed: logs.filter(l => l.status === "FAILED").length,
              pending: scheduled.length,
         });
+    }
   };
 
   const fetchLogDataHistory = async () => {
