@@ -118,7 +118,6 @@ export async function POST(req: NextRequest) {
           reminderType: typeLabel,
           message,
           status: deliverySuccess ? "SENT" : "FAILED",
-          errorMessage: deliverySuccess ? null : (result.error ?? "Unknown error"),
         },
       });
       return NextResponse.json({ success: deliverySuccess, log, smsResult: result }, { status: 201 });
