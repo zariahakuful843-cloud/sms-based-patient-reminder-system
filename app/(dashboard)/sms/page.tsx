@@ -171,7 +171,7 @@ export default function SMSPage() {
   useEffect(() => {
     async function initPageData() {
       try {
-        const patientRes = await fetch("/api/patients");
+        const patientRes = await fetch("/api/patients?limit=200");
         const patientData = await patientRes.json();
         if (Array.isArray(patientData)) setPatients(patientData);
         else if (patientData && Array.isArray(patientData.data)) setPatients(patientData.data);
