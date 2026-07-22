@@ -115,7 +115,7 @@ export default function SMSPage() {
   const [scheduledPage, setScheduledPage] = useState(1);
   const scheduledLimit = 10;
 
-  const [stats, setStats] = useState({ sent: 0, failed: 0, scheduledCount: 0 });
+  const [stats, setStats] = useState({ total: 0, sent: 0, failed: 0,pending: 0 });
   const [success, setSuccess] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [busy, setBusy] = useState(false);
@@ -137,8 +137,12 @@ export default function SMSPage() {
       const res = await fetch("/api/sms/stats");
       if (res.ok) { const data = await res.json(); if (data) setStats(data); }
     } catch {
-      setStats({ sent: logs.filter(l => l.status === "SENT").length, failed: logs.filter(l => l.status === "FAILED").length, scheduledCount: scheduled.length });
-    }
+        setStats({
+             total: logs.length + scheduled.length,
+             sent: logs.filter(l => l.status === "SENT").length,
+             failed: logs.filter(l => l.status === "FAILED").length,
+             pending: scheduled.length,
+        });
   };
 
   const fetchLogDataHistory = async () => {
