@@ -28,6 +28,7 @@ type ChartData = {
 export default function ReportsPage() {
   // Summary stats
   const [stats, setStats] = useState({
+    totalAll: 0,
     totalSent: 0,
     totalDelivered: 0,
     totalPending: 0,
@@ -72,6 +73,7 @@ export default function ReportsPage() {
         const rate = totalSms > 0 ? Math.round((delivered / totalSms) * 100) : 0;
 
         setStats({
+          totalAll: totalSms,
           totalSent: sent,
           totalDelivered: delivered,
           totalPending: pendingMessages,
@@ -199,8 +201,8 @@ export default function ReportsPage() {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 gap-4">
         <StatCard
-          label="Total Sent"
-          value={stats.totalSent}
+          label="Total SMS"
+          value={stats.totalAll}
           color="blue"
           icon={
             <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -209,8 +211,8 @@ export default function ReportsPage() {
           }
         />
         <StatCard
-          label="Delivered"
-          value={stats.totalDelivered}
+          label="Sent"
+          value={stats.totalSent}
           color="emerald"
           icon={
             <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -239,7 +241,7 @@ export default function ReportsPage() {
           }
         />
         <StatCard
-          label="Delivery Rate"
+          label="Acceptance Rate"
           value={`${stats.deliveryRate}%`}
           color="violet"
           icon={
@@ -360,7 +362,7 @@ export default function ReportsPage() {
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="text-center">
                     <p className="text-2xl font-bold text-slate-900">{stats.deliveryRate}%</p>
-                    <p className="text-xs text-slate-500">Delivered</p>
+                    <p className="text-xs text-slate-500">Accepted</p>
                   </div>
                 </div>
               </div>
