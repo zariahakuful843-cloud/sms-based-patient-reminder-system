@@ -331,7 +331,13 @@ export default function SMSPage() {
                     )}
                   </div>
                   <Button type="submit" disabled={busy} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg text-xs tracking-wider uppercase">
-                              {tab === "bulk" && (
+                    {busy ? "Processing Request..." : singleForm.isScheduled ? "⏰ Schedule Reminder" : "📨 Send SMS Now"}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+          {tab === "bulk" && (
             <Card className="bg-white shadow-sm border border-gray-100 rounded-xl">
               <CardHeader className="p-5 font-bold text-gray-800 border-b border-gray-50">Broadcast Bulk Hospital SMS Alert Campaign</CardHeader>
               <CardContent className="p-6">
@@ -444,4 +450,3 @@ export default function SMSPage() {
     </div>
   );
 }
-
