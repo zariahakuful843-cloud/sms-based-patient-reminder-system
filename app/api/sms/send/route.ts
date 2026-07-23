@@ -25,14 +25,14 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const body = await req.json();
     const { 
       mode,          // "single" or "bulk"
       patientId,     // For single patient
       message,       // The message body text
       reminderType,  // Type label string
       phoneNumber,   // Manual custom phone number input if any
-      scheduleTime   // Optional ISO datetime string for future sending
+      scheduleTime,  // Optional ISO datetime string for future sending
+      patientIds     // For bulk: optional list of specific patient IDs to target
     } = body as {
       mode: "single" | "bulk";
       patientId?: number;
@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
       reminderType?: string;
       phoneNumber?: string;
       scheduleTime?: string;
+      patientIds?: number[];
     };
 
     if (!message) {
@@ -74,10 +75,13 @@ export async function POST(req: NextRequest) {
         });
         return NextResponse.json({ success: true, mode: "scheduled-single", data: scheduleRecord }, { status: 201 });
       } else {
-        // Bulk Scheduling Action: Pull all patient contacts
-        const allPatients = await prisma.patient.findMany({ select: { id: true, fullName: true, phoneNumber: true } });
+        // Bulk Scheduling Action: Pull all patient contacts, or just the selected ones
+        const allPatients = await prisma.patient.findMany({
+          where: patientIds && patientIds.length > 0 ? { id: { in: patientIds } } : undefined,
+          select: { id: true, fullName: true, phoneNumber: true },
+        });
         
-        const schedulePromises = allPatients.map(p => 
+        const schedulePromises = allPatients.map(p =>
           prisma.scheduledReminder.create({
             data: {
               patientId: p.id,
@@ -123,12 +127,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: deliverySuccess, log, smsResult: result }, { status: 201 });
 
     } else {
-      // Immediate Bulk Group Broadcasting Action
-      const allPatients = await prisma.patient.findMany();
+      // Immediate Bulk Group Broadcasting Action, or just the selected patients
+      const allPatients = await prisma.patient.findMany({
+        where: patientIds && patientIds.length > 0 ? { id: { in: patientIds } } : undefined,
+      });
       if (allPatients.length === 0) {
-        return NextResponse.json({ error: "No patients found in your database to broadcast to." }, { status: 404 });
+        return NextResponse.json({ error: "No patients found matching your selection." }, { status: 404 });
       }
-
+      
       // Loop and dispatch cleanly to all numbers
       const batchLogs = [];
       for (const p of allPatients) {
