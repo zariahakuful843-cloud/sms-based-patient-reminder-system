@@ -299,7 +299,7 @@ export default function SMSPage() {
       <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-2">
         {(["single", "bulk", "history", "scheduled", "failed"] as const).map((t) => (
           <button key={t} type="button" onClick={() => setTab(t)} className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 ${tab === t ? "border-blue-600 text-blue-600" : "border-transparent text-slate-400 hover:text-slate-800"}`}>
-            {t === "single" && "👤 Single SMS"}{t === "bulk" && "👥 Bulk Broadcast"}{t === "history" && "📋 Recent Activity"}{t === "scheduled" && "⏰ Future Scheduled"}{t === "failed" && "❌ Failures"}
+            {t === "single" && "👤 Single SMS"}{t === "bulk" && "👥 Bulk SMS"}{t === "history" && "📋 SMS History"}{t === "scheduled" && "⏰ Scheduled SMS"}{t === "failed" && "❌ Failed SMS"}
           </button>
         ))}
       </div>
@@ -368,17 +368,17 @@ export default function SMSPage() {
           )}
           {tab === "bulk" && (
             <Card className="bg-white shadow-sm border border-gray-100 rounded-xl">
-              <CardHeader className="p-5 font-bold text-gray-800 border-b border-gray-50">Broadcast Bulk Hospital SMS Alert Campaign</CardHeader>
+              <CardHeader className="p-5 font-bold text-gray-800 border-b border-gray-50">Send to Multiple Patients</CardHeader>
               <CardContent className="p-6">
                 <form onSubmit={handleSendBulkSMS} className="space-y-4">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Target Notification Context Category</label>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Reminder Type</label>
                     <Select value={bulkReminderType} onChange={(e) => setBulkReminderType(e.target.value as ReminderTypeKey)}>
                       {REMINDER_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                     </Select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Message Body Content *</label>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Message *</label>
                     <Textarea value={bulkMessage} onChange={(e) => setBulkMessage(e.target.value)} placeholder="Type out custom transmission text strings..." className="h-32 resize-none" required />
                   </div>
                   <div className="border border-slate-100 rounded-lg p-3 bg-slate-50/50 space-y-3">
@@ -417,17 +417,17 @@ export default function SMSPage() {
                   <div className="border border-slate-100 rounded-lg p-3 bg-slate-50/50 space-y-3">
                     <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-700 select-none">
                       <input type="checkbox" checked={bulkIsScheduled} onChange={(e) => setBulkIsScheduled(e.target.checked)} className="rounded accent-blue-600 h-4 w-4" />
-                      Schedule bulk broadcast for future target window
+                      Send later instead of now
                     </label>
                     {bulkIsScheduled && (
                       <div>
-                        <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Target Release Delivery Execution Time</label>
+                        <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Date & Time to Sende</label>
                         <Input type="datetime-local" value={bulkScheduleDateTime} onChange={(e) => setBulkScheduleDateTime(e.target.value)} required={bulkIsScheduled} />
                       </div>
                     )}
                   </div>
                   <Button type="submit" disabled={busy} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg text-xs tracking-wider uppercase">
-                    {busy ? "Processing Campaign Operations..." : bulkIsScheduled ? "⏰ Schedule Bulk Target Release" : "📢 Execute Immediate Global Broadcast"}
+                    {busy ? "Sending..." : bulkIsScheduled ? "⏰ Schedule Message" : "📢 Send Now"}
                   </Button>
                 </form>
               </CardContent>
@@ -496,7 +496,7 @@ export default function SMSPage() {
         </div>
         <div className="space-y-6">
           <Card className="bg-white border border-gray-100 shadow-sm rounded-xl sticky top-6">
-            <CardHeader className="p-5 font-bold text-gray-800 border-b border-gray-50">Live Output Tracker</CardHeader>
+            <CardHeader className="p-5 font-bold text-gray-800 border-b border-gray-50">Message Preview</CardHeader>
             <CardContent className="p-6">
               <div className="bg-blue-50/70 border border-blue-100 rounded-xl p-4 text-gray-700 min-h-[140px] flex flex-col justify-between">
                 <p className="text-xs leading-relaxed font-medium whitespace-pre-wrap">{tab === "single" ? calculatedLiveMessageString : bulkMessage || "Type into campaign fields to visualize..."}</p>
