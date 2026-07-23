@@ -319,12 +319,12 @@ export default function SMSPage() {
                       </Select>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">Target Phone Connection</label>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Phone Number</label>
                       <Input type="text" placeholder="Autofilled phone path..." value={singleForm.phoneNumber} onChange={(e) => setSingleForm(prev => ({ ...prev, phoneNumber: e.target.value }))} />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Notification Category Template *</label>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Reminder Type *</label>
                     <Select value={singleForm.reminderType} onChange={(e) => setSingleForm(prev => ({ ...prev, reminderType: e.target.value as ReminderTypeKey }))}>
                       {REMINDER_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                     </Select>
@@ -350,11 +350,11 @@ export default function SMSPage() {
                   <div className="border border-slate-100 rounded-lg p-3 bg-slate-50/50 space-y-3">
                     <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-700 select-none">
                       <input type="checkbox" checked={singleForm.isScheduled} onChange={(e) => setSingleForm(prev => ({ ...prev, isScheduled: e.target.checked }))} className="rounded accent-blue-600 h-4 w-4" />
-                      Decline instant dispatch, schedule for future delivery
+                      Send later instead of now
                     </label>
                     {singleForm.isScheduled && (
                       <div>
-                        <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Target Execution Release Time</label>
+                        <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Date & Time to Send</label>
                         <Input type="datetime-local" value={singleForm.scheduleDateTime} onChange={(e) => setSingleForm(prev => ({ ...prev, scheduleDateTime: e.target.value }))} required={singleForm.isScheduled} />
                       </div>
                     )}
