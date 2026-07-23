@@ -171,7 +171,7 @@ export default function SMSPage() {
     try {
       const res = await fetch(`/api/sms/scheduled?page=${scheduledPage}&limit=${scheduledLimit}&search=${scheduledSearch}`);
       const data = await res.json();
-      setScheduled(data.scheduled || []);
+      setScheduled(data.items || []);
       setScheduledTotal(data.total || 0);
     } catch (err) { console.error(err); } finally { setLoadingScheduled(false); }
   };
