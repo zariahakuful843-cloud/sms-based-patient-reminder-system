@@ -131,6 +131,14 @@ export default function SMSPage() {
   const [bulkReminderType, setBulkReminderType] = useState<ReminderTypeKey>("APPOINTMENT_REMINDER");
   const [bulkIsScheduled, setBulkIsScheduled] = useState(false);
   const [bulkScheduleDateTime, setBulkScheduleDateTime] = useState("");
+  const [bulkSendToAll, setBulkSendToAll] = useState(true);
+  const [bulkSelectedIds, setBulkSelectedIds] = useState<string[]>([]);
+
+  const toggleBulkPatient = (id: string) => {
+    setBulkSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
+    );
+  };
 
   const fetchAnalyticsSummary = async () => {
     try {
@@ -224,6 +232,15 @@ export default function SMSPage() {
   const handleSendBulkSMS = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!bulkMessage.trim()) return;
+    if (!bulkSendToAll && bulkSelectedIds.length === 0) {
+      setError("Please select at least one patient, or choose \"Send to all patients\".");
+      return;
+    }
+    const recipientCount = bulkSendToAll ? patients.length : bulkSelectedIds.length;
+    const confirmMessage = bulkIsScheduled
+      ? `This will schedule this message for ${recipientCount} patient(s). Continue?`
+      : `This will immediately send a real SMS to ${recipientCount} patient(s) right now. This cannot be undone. Continue?`;
+    if (!confirm(confirmMessage)) return;
     setBusy(true); setError(""); setSuccess("");
     try {
       const response = await fetch("/api/sms/send", {
@@ -231,12 +248,14 @@ export default function SMSPage() {
         body: JSON.stringify({
           mode: "bulk", message: bulkMessage, reminderType: bulkReminderType,
           scheduleTime: bulkIsScheduled ? new Date(bulkScheduleDateTime).toISOString() : undefined,
+          patientIds: bulkSendToAll ? undefined : bulkSelectedIds.map(Number),
         }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Bulk process failed.");
       setSuccess(bulkIsScheduled ? "Bulk campaign scheduled!" : "Bulk messages dispatched successfully!");
       setBulkMessage(""); setBulkIsScheduled(false); setBulkScheduleDateTime("");
+      setBulkSendToAll(true); setBulkSelectedIds([]);
     } catch (err: any) { setError(err.message || "Failed to deploy broadcast."); } finally { setBusy(false); }
   };
 
@@ -361,6 +380,39 @@ export default function SMSPage() {
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Message Body Content *</label>
                     <Textarea value={bulkMessage} onChange={(e) => setBulkMessage(e.target.value)} placeholder="Type out custom transmission text strings..." className="h-32 resize-none" required />
+                  </div>
+                  <div className="border border-slate-100 rounded-lg p-3 bg-slate-50/50 space-y-3">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-700 select-none">
+                      <input
+                        type="checkbox"
+                        checked={bulkSendToAll}
+                        onChange={(e) => { setBulkSendToAll(e.target.checked); setBulkSelectedIds([]); }}
+                        className="rounded accent-blue-600 h-4 w-4"
+                      />
+                      Send to all patients ({patients.length})
+                    </label>
+                    {!bulkSendToAll && (
+                      <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-lg bg-white divide-y divide-slate-100">
+                        {patients.length === 0 ? (
+                          <p className="p-3 text-xs text-gray-400">No patients found.</p>
+                        ) : (
+                          patients.map((p) => (
+                            <label key={p.id} className="flex items-center gap-2 px-3 py-2 text-xs text-gray-700 cursor-pointer hover:bg-slate-50">
+                              <input
+                                type="checkbox"
+                                checked={bulkSelectedIds.includes(String(p.id))}
+                                onChange={() => toggleBulkPatient(String(p.id))}
+                                className="rounded accent-blue-600 h-4 w-4"
+                              />
+                              {p.fullName} <span className="text-gray-400">({p.phoneNumber})</span>
+                            </label>
+                          ))
+                        )}
+                      </div>
+                    )}
+                    {!bulkSendToAll && (
+                      <p className="text-[11px] text-gray-500">{bulkSelectedIds.length} patient(s) selected</p>
+                    )}
                   </div>
                   <div className="border border-slate-100 rounded-lg p-3 bg-slate-50/50 space-y-3">
                     <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-700 select-none">
