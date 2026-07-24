@@ -416,13 +416,14 @@ export default function ReportsPage() {
 
       {/* Monthly Trends */}
       <Card>
-        <CardHeader title="Monthly Trends" description="SMS volume over time" />
+        <CardHeader title="Monthly Trends" description="Sent vs. failed messages over time" />
         <CardContent>
           <div className="overflow-x-auto">
             <div className="flex gap-4 pb-4" style={{ minWidth: "100%" }}>
               {monthlyTrends.map((trend, idx) => {
                 const maxValue = Math.max(
-                  ...monthlyTrends.map((t) => Math.max(t.sent, t.delivered))
+                  ...monthlyTrends.map((t) => Math.max(t.sent, t.failed)),
+                  1
                 );
                 return (
                   <div key={idx} className="flex-1 min-w-[80px]">
@@ -440,9 +441,9 @@ export default function ReportsPage() {
                         <div
                           className="w-full bg-emerald-400 rounded-t-sm transition-all"
                           style={{
-                            height: `${(trend.delivered / maxValue) * 120}px`,
+                            height: `${(trend.failed / maxValue) * 120}px`,
                           }}
-                          title={`Delivered: ${trend.delivered}`}
+                          title={`Delivered: ${trend.failed}`}
                         />
                       </div>
                     </div>
@@ -461,7 +462,7 @@ export default function ReportsPage() {
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded bg-emerald-400" />
-                <span className="text-sm text-slate-600">Delivered</span>
+                <span className="text-sm text-slate-600">Failed</span>
               </div>
             </div>
           </div>
