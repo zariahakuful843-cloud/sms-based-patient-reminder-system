@@ -104,6 +104,7 @@ async function getMonthlyTrends(params?: { from?: Date; to?: Date }) {
     sent: sentCounts[idx],
     failed: failedCounts[idx],
   }));
+}
 
 export async function getSmsStats(
   params?: { from?: Date; to?: Date }
