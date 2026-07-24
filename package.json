@@ -14,7 +14,9 @@
   "react-dom": "18.2.0",
   "bcryptjs": "^2.4.3",
   "jose": "^5.9.6",
-  "clsx": "^2.1.1"
+  "clsx": "^2.1.1",
+  "papaparse": "^5.4.1",
+  "xlsx": "^0.18.5"
 },
   "devDependencies": {
     "@prisma/client": "^5.22.0",
@@ -23,6 +25,7 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@types/papaparse": "^5.3.14",
     "eslint": "8.57.0",
     "eslint-config-next": "14.2.5",
     "prisma": "^5.22.0",
