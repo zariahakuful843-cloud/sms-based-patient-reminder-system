@@ -143,7 +143,10 @@ export default function SMSPage() {
   const fetchAnalyticsSummary = async () => {
     try {
       const res = await fetch("/api/sms/stats");
-      if (res.ok) { const data = await res.json(); if (data) setStats(data); }
+      if (res.ok) {
+        const data = await res.json();
+        if (data) setStats({ total: data.total, sent: data.sent, failed: data.failed, pending: data.pendingReminders });
+      }
     } catch {
         setStats({
              total: logs.length + scheduled.length,
@@ -169,7 +172,7 @@ export default function SMSPage() {
   const fetchScheduledRemindersData = async () => {
     setLoadingScheduled(true);
     try {
-      const res = await fetch(`/api/sms/scheduled?page=${scheduledPage}&limit=${scheduledLimit}&search=${scheduledSearch}`);
+      const res = await fetch(`/api/sms/scheduled?status=PENDING&page=${scheduledPage}&limit=${scheduledLimit}&search=${scheduledSearch}`);
       const data = await res.json();
       setScheduled(data.items || []);
       setScheduledTotal(data.total || 0);
