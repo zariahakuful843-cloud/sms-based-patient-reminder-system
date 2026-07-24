@@ -17,7 +17,7 @@ export type SmsByReminderType = {
 export type SmsMonthlyTrend = {
   month: string;
   sent: number;
-  delivered: number;
+  failed: number;
 };
 
 /**
@@ -77,29 +77,33 @@ async function getMonthlyTrends(params?: { from?: Date; to?: Date }) {
     cursor = addMonths(cursor, 1);
   }
 
-  const counts = await Promise.all(
-    buckets.map((b) =>
-      prisma.sMSLog.count({
-        where: {
-          status: "SENT",
-          sentAt: {
-            gte: b.monthStart,
-            lte: endOfMonth(b.monthStart),
+  const [sentCounts, failedCounts] = await Promise.all([
+    Promise.all(
+      buckets.map((b) =>
+        prisma.sMSLog.count({
+          where: {
+            status: "SENT",
+            sentAt: { gte: b.monthStart, lte: endOfMonth(b.monthStart) },
           },
-        },
-      })
-    )
-  );
-
-  return buckets.map((b, idx) => {
-    const sent = counts[idx];
-    return {
-      month: b.monthLabel,
-      sent,
-      delivered: sent,
-    };
-  });
-}
+        })
+      )
+    ),
+    Promise.all(
+      buckets.map((b) =>
+        prisma.sMSLog.count({
+          where: {
+            status: "FAILED",
+            sentAt: { gte: b.monthStart, lte: endOfMonth(b.monthStart) },
+          },
+        })
+      )
+    ),
+  ]);
+  return buckets.map((b, idx) => ({
+    month: b.monthLabel,
+    sent: sentCounts[idx],
+    failed: failedCounts[idx],
+  }));
 
 export async function getSmsStats(
   params?: { from?: Date; to?: Date }
