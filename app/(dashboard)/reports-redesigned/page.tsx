@@ -83,16 +83,12 @@ export default function ReportsPage() {
 
         setSmsPerformance([
           { name: "Sent", value: sent, percentage: 0 },
-          { name: "Delivered", value: delivered, percentage: 0 },
+          { name: "Pending", value: pendingMessages, percentage: 0 },
           { name: "Failed", value: failed, percentage: 0 },
         ]);
 
         setDeliveryStatus([
-          {
-            name: "Delivered",
-            value: delivered,
-            percentage: rate,
-          },
+          { name: "Sent", value: sent, percentage: rate },
           { name: "Pending", value: pendingMessages, percentage: 0 },
           { name: "Failed", value: failed, percentage: 0 },
         ]);
@@ -290,7 +286,7 @@ export default function ReportsPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         {/* SMS Performance */}
         <Card>
-          <CardHeader title="SMS Performance" description="Message delivery breakdown" />
+          <CardHeader title="SMS Performance" description="Message status breakdown" />
           <CardContent>
             <div className="space-y-4">
               {smsPerformance.map((item) => (
@@ -301,11 +297,11 @@ export default function ReportsPage() {
                   </div>
                   <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
                     <div
-                      className={`h-full ${
+                     className={`h-full ${
                         item.name === "Sent"
                           ? "bg-blue-500"
-                          : item.name === "Delivered"
-                            ? "bg-emerald-500"
+                          : item.name === "Pending"
+                            ? "bg-amber-500"
                             : "bg-rose-500"
                       }`}
                       style={{
@@ -336,7 +332,7 @@ export default function ReportsPage() {
 
         {/* Delivery Status Pie */}
         <Card>
-          <CardHeader title="Delivery Status" description="Current message statuses" />
+          <CardHeader title="Message Status" description="Current message statuses" />
           <CardContent>
             <div className="flex items-center justify-center mb-6">
               <div className="relative w-32 h-32">
@@ -374,12 +370,13 @@ export default function ReportsPage() {
                   <div className="flex items-center gap-2">
                     <div
                       className={`w-2.5 h-2.5 rounded-full ${
-                        item.name === "Delivered"
-                          ? "bg-emerald-500"
+                        item.name === "Sent"
+                          ? "bg-blue-500"
                           : item.name === "Pending"
                             ? "bg-amber-500"
                             : "bg-rose-500"
                       }`}
+                      
                     />
                     <span className="text-sm text-slate-700">{item.name}</span>
                   </div>
@@ -429,6 +426,7 @@ export default function ReportsPage() {
                   <div key={idx} className="flex-1 min-w-[80px]">
                     <div className="flex gap-1 items-end justify-center h-40 mb-2">
                       <div className="flex flex-col items-center gap-1 flex-1">
+                        <span className="text-[10px] font-semibold text-slate-600">{trend.sent}</span>
                         <div
                           className="w-full bg-blue-400 rounded-t-sm transition-all"
                           style={{
@@ -438,12 +436,13 @@ export default function ReportsPage() {
                         />
                       </div>
                       <div className="flex flex-col items-center gap-1 flex-1">
+                        <span className="text-[10px] font-semibold text-slate-600">{trend.failed}</span>
                         <div
-                          className="w-full bg-emerald-400 rounded-t-sm transition-all"
+                          className="w-full bg-rose-400 rounded-t-sm transition-all"
                           style={{
                             height: `${(trend.failed / maxValue) * 120}px`,
                           }}
-                          title={`Delivered: ${trend.failed}`}
+                          title={`Failed: ${trend.failed}`}
                         />
                       </div>
                     </div>
@@ -461,7 +460,7 @@ export default function ReportsPage() {
                 <span className="text-sm text-slate-600">Sent</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded bg-emerald-400" />
+                <div className="w-3 h-3 rounded bg-rose-400" />
                 <span className="text-sm text-slate-600">Failed</span>
               </div>
             </div>
