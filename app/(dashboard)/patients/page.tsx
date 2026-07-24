@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/layout/Header";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { formatDate, calculateAge } from "@/lib/utils";
+import ImportPatientsModal from "@/components/patients/ImportPatientsModal";
 
 type Role = "ADMIN" | "RECEPTIONIST" | "NURSE" | "DOCTOR";
 
@@ -31,6 +32,7 @@ export default function PatientsPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const limit = 15;
+  const [importOpen, setImportOpen] = useState(false);
 
   const fetchPatients = useCallback(async () => {
     setLoading(true);
@@ -84,14 +86,22 @@ export default function PatientsPage() {
         description={`${total} registered patient${total !== 1 ? "s" : ""}`}
         action={
           canRegisterPatient ? (
-            <Link href="/patients/new">
-              <Button size="sm">
+            <div className="flex gap-2">
+              <Button size="sm" variant="secondary" onClick={() => setImportOpen(true)}>
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
                 </svg>
-                Register Patient
+                Import Patients
               </Button>
-            </Link>
+              <Link href="/patients/new">
+                <Button size="sm">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                  Register Patient
+                </Button>
+              </Link>
+            </div>
           ) : null
         }
       />
@@ -191,7 +201,7 @@ export default function PatientsPage() {
         </table>
       </div>
 
-      {/* Pagination */}
+     {/* Pagination */}
       {totalPages > 1 && (
         <div className="mt-4 flex items-center justify-between text-sm">
           <span className="text-slate-500">
@@ -217,6 +227,12 @@ export default function PatientsPage() {
           </div>
         </div>
       )}
+
+      <ImportPatientsModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={fetchPatients}
+      />
     </div>
   );
 }
