@@ -94,11 +94,15 @@ export default function ReportsPage() {
         ]);
 
 
+        const reminderTypeTotal = (data.reminderTypes ?? []).reduce(
+          (sum: number, rt: any) => sum + (rt.value || 0),
+          0
+        );
         setReminderTypes(
           (data.reminderTypes ?? []).map((rt: any) => ({
             name: rt.name,
             value: rt.value,
-            percentage: 0,
+            percentage: reminderTypeTotal > 0 ? Math.round((rt.value / reminderTypeTotal) * 100) : 0,
           }))
         );
 
