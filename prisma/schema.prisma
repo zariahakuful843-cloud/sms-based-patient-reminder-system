@@ -46,8 +46,8 @@ model Appointment {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  scheduledReminders ScheduledReminder[]
 }
-
 model SMSLog {
   id             Int      @id @default(autoincrement())
   patientId      Int
@@ -61,16 +61,18 @@ model SMSLog {
 }
 
 model ScheduledReminder {
-  id            Int      @id @default(autoincrement())
+  id            Int          @id @default(autoincrement())
   patientId     Int
   patientName   String
   phoneNumber   String
   reminderType  String
   message       String
-  status        String   @default("PENDING")
-  scheduledAt  DateTime
+  status        String       @default("PENDING")
+  scheduledAt   DateTime
   sentAt        DateTime?
-  patient       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  createdAt     DateTime @default(now())
+  patient       Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  appointmentId Int?
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  createdAt     DateTime     @default(now())
 }
 
