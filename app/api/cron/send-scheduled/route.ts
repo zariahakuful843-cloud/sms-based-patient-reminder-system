@@ -52,6 +52,14 @@ export async function GET(req: NextRequest) {
         },
       });
 
+      // If this reminder belongs to an appointment and actually sent, mark it Reminder: Sent.
+      if (reminder.appointmentId && deliverySuccess) {
+        await prisma.appointment.update({
+          where: { id: reminder.appointmentId },
+          data: { reminderSent: true },
+        }).catch(() => {}); // appointment may have been deleted; safe to ignore
+      }
+
       if (deliverySuccess) sentCount++;
       else failedCount++;
     }
