@@ -93,6 +93,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       data: allowedData as any,
       include: { patient: true },
     });
+
+    // If the status changed away from Scheduled, cancel any still-pending reminder for it.
+    if (allowedData.status !== undefined && allowedData.status !== "SCHEDULED") {
+      await prisma.scheduledReminder.updateMany({
+        where: { appointmentId: appt.id, status: "PENDING" },
+        data: { status: "CANCELLED" },
+      });
+    }
+
     return NextResponse.json(appt);
   } catch {
     return NextResponse.json({ error: "Not found or server error." }, { status: 404 });
