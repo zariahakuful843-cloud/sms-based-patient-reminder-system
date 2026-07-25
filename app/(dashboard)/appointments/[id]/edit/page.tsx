@@ -87,12 +87,18 @@ export default function AppointmentEditPage() {
 
     const appointmentDate = new Date(`${form.appointmentDate}T${form.appointmentTime}`).toISOString();
 
-    const payload = {
-      doctorName: form.doctorName,
-      appointmentDate,
-      status: canUpdateStatus ? form.status : appt?.status,
-      notes: canEditConsultationNotes ? form.notes : appt?.notes,
-    };
+   const payload: Record<string, unknown> = {};
+
+if (canUpdateAppointment) {
+  payload.doctorName = form.doctorName;
+  payload.appointmentDate = appointmentDate;
+}
+if (canUpdateStatus) {
+  payload.status = form.status;
+}
+if (canEditConsultationNotes) {
+  payload.notes = form.notes;
+}
 
     const res = await fetch(`/api/appointments/${id}`, {
       method: "PUT",
