@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
+import { buildReminderMessageByType } from "@/lib/sms";
 
 export async function GET(req: NextRequest) {
   try {
@@ -78,6 +79,31 @@ export async function POST(req: NextRequest) {
       },
       include: { patient: true },
     });
+
+    // Auto-schedule a reminder for 1 day before the appointment, same time.
+    const reminderTime = new Date(appointment.appointmentDate);
+    reminderTime.setDate(reminderTime.getDate() - 1);
+
+    if (reminderTime > new Date()) {
+      const message = buildReminderMessageByType({
+        reminderType: "APPOINTMENT_REMINDER",
+        patientName: appointment.patient.fullName,
+        appointmentDate: appointment.appointmentDate,
+      });
+
+      await prisma.scheduledReminder.create({
+        data: {
+          patientId: appointment.patientId,
+          patientName: appointment.patient.fullName,
+          phoneNumber: appointment.patient.phoneNumber,
+          reminderType: "APPOINTMENT_REMINDER",
+          message,
+          status: "PENDING",
+          scheduledAt: reminderTime,
+          appointmentId: appointment.id,
+        },
+      });
+    }
 
     return NextResponse.json(appointment, { status: 201 });
   } catch {
