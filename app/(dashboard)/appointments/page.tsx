@@ -68,11 +68,20 @@ export default function AppointmentsPage() {
     })();
   }, []);
 
-  async function updateStatus(id: number, newStatus: string) {
+ async function updateStatus(id: number, newStatus: string) {
     await fetch(`/api/appointments/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: newStatus }),
+    });
+    fetchAppointments();
+  }
+
+  async function toggleReminder(id: number, current: boolean) {
+    await fetch(`/api/appointments/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reminderSent: !current }),
     });
     fetchAppointments();
   }
@@ -97,6 +106,7 @@ export default function AppointmentsPage() {
 
   const canUpdateStatus = role === "ADMIN" || role === "RECEPTIONIST" || role === "NURSE";
   const showStatusSelect = canUpdateStatus;
+  const canToggleReminder = role === "ADMIN" || role === "RECEPTIONIST";
 
   const showNewAppointment = canCreateAppointment;
 
@@ -275,7 +285,19 @@ export default function AppointmentsPage() {
                   </td>
 
                   <td className="px-4 py-3">
-                    {a.reminderSent ? (
+                    {canToggleReminder ? (
+                      <button
+                        onClick={() => toggleReminder(a.id, a.reminderSent)}
+                        className={`text-xs font-medium rounded-md px-2 py-1 ${
+                          a.reminderSent
+                            ? "text-emerald-600 hover:bg-emerald-50"
+                            : "text-amber-500 hover:bg-amber-50"
+                        }`}
+                        title="Click to toggle reminder status"
+                      >
+                        {a.reminderSent ? "✓ Sent" : "Pending"}
+                      </button>
+                    ) : a.reminderSent ? (
                       <span className="text-xs text-emerald-600">✓ Sent</span>
                     ) : (
                       <span className="text-xs text-amber-500">Pending</span>
