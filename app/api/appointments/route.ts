@@ -12,11 +12,21 @@ export async function GET(req: NextRequest) {
 
 
   // Auto-update any Scheduled appointments whose date has already passed to Missed.
-  await prisma.appointment.updateMany({
+  const overdue = await prisma.appointment.findMany({
     where: { status: "SCHEDULED", appointmentDate: { lt: new Date() } },
-    data: { status: "MISSED" },
+    select: { id: true },
   });
-
+  if (overdue.length > 0) {
+    const overdueIds = overdue.map((a) => a.id);
+    await prisma.appointment.updateMany({
+      where: { id: { in: overdueIds } },
+      data: { status: "MISSED" },
+    });
+    await prisma.scheduledReminder.updateMany({
+      where: { appointmentId: { in: overdueIds }, status: "PENDING" },
+      data: { status: "CANCELLED" },
+    });
+  }
   const { searchParams } = new URL(req.url);
   const search = searchParams.get("search") ?? "";
   const status = searchParams.get("status") ?? "";
