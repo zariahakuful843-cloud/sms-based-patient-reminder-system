@@ -10,6 +10,12 @@ export async function GET(req: NextRequest) {
   }
 
 
+  // Auto-update any Scheduled appointments whose date has already passed to Missed.
+  await prisma.appointment.updateMany({
+    where: { status: "SCHEDULED", appointmentDate: { lt: new Date() } },
+    data: { status: "MISSED" },
+  });
+
   const { searchParams } = new URL(req.url);
   const search = searchParams.get("search") ?? "";
   const status = searchParams.get("status") ?? "";
