@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/Badge";
 import { Card, CardContent, CardHeader, StatCard } from "@/components/ui/Card";
 import { Input, Select } from "@/components/ui/Input";
 import { formatDateTime } from "@/lib/utils";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 type SMSLog = {
   id: number;
@@ -140,12 +143,83 @@ export default function ReportsPage() {
 
   const totalPages = Math.ceil(total / limit);
 
-  const handleExportPDF = () => {
-    alert("PDF export feature coming soon!");
+ const fetchAllLogsForExport = async () => {
+    const params = new URLSearchParams({
+      search: searchLogs,
+      status: statusFilter,
+      page: "1",
+      limit: "5000",
+    });
+    const res = await fetch(`/api/sms/logs?${params}`);
+    const data = await res.json();
+    return (data.logs ?? []) as SMSLog[];
   };
 
-  const handleExportExcel = () => {
-    alert("Excel export feature coming soon!");
+  const handleExportPDF = async () => {
+    const allLogs = await fetchAllLogsForExport();
+    const doc = new jsPDF();
+
+    doc.setFontSize(16);
+    doc.text("SMS Reports & Analytics", 14, 18);
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Generated ${new Date().toLocaleString()}`, 14, 25);
+
+    doc.setFontSize(11);
+    doc.setTextColor(0);
+    const summaryY = 34;
+    doc.text(`Total SMS: ${stats.totalAll}`, 14, summaryY);
+    doc.text(`Sent: ${stats.totalSent}`, 60, summaryY);
+    doc.text(`Pending: ${stats.totalPending}`, 100, summaryY);
+    doc.text(`Failed: ${stats.totalFailed}`, 145, summaryY);
+    doc.text(`Acceptance Rate: ${stats.deliveryRate}%`, 14, summaryY + 7);
+
+    autoTable(doc, {
+      startY: summaryY + 15,
+      head: [["Patient", "Phone", "Type", "Status", "Date Sent"]],
+      body: allLogs.map((log) => [
+        log.patient?.fullName ?? log.patientName ?? "-",
+        log.phoneNumber,
+        log.reminderType,
+        log.status,
+        formatDateTime(log.sentAt),
+      ]),
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [37, 99, 235] },
+    });
+
+    doc.save(`sms-report-${new Date().toISOString().slice(0, 10)}.pdf`);
+  };
+
+  const handleExportExcel = async () => {
+    const allLogs = await fetchAllLogsForExport();
+
+    const summarySheet = XLSX.utils.aoa_to_sheet([
+      ["SMS Reports & Analytics"],
+      [`Generated ${new Date().toLocaleString()}`],
+      [],
+      ["Total SMS", stats.totalAll],
+      ["Sent", stats.totalSent],
+      ["Pending", stats.totalPending],
+      ["Failed", stats.totalFailed],
+      ["Acceptance Rate", `${stats.deliveryRate}%`],
+    ]);
+
+    const logsSheet = XLSX.utils.json_to_sheet(
+      allLogs.map((log) => ({
+        Patient: log.patient?.fullName ?? log.patientName ?? "-",
+        Phone: log.phoneNumber,
+        Type: log.reminderType,
+        Status: log.status,
+        "Date Sent": formatDateTime(log.sentAt),
+      }))
+    );
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, summarySheet, "Summary");
+    XLSX.utils.book_append_sheet(wb, logsSheet, "SMS Log");
+
+    XLSX.writeFile(wb, `sms-report-${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
   if (loading) {
