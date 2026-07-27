@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SMS-Based Patient Reminder System
+
+A web-based application built for health facilities in Ghana to manage patients, appointments, and automated SMS reminders — reducing missed appointments through reliable, locally-integrated SMS communication.
+
+## Overview
+
+This system allows healthcare staff to register patients, schedule appointments, and automatically send SMS reminders to patients through the Arkesel SMS gateway. Reminders are automatically created when an appointment is booked, automatically cancelled if the appointment's status changes, and automatically sent via a scheduled background task — requiring no manual intervention once an appointment is created.
+
+## Key Features
+
+- **Role-based access control** for four user types: Administrator, Receptionist, Doctor, and Nurse
+- **Patient management**, including bulk import via CSV/Excel upload with a downloadable template
+- **Appointment scheduling** with automatic status tracking (Scheduled, Completed, Cancelled, Missed)
+- **Automated SMS reminders**, automatically scheduled 1 day before each appointment, with automatic cancellation if the appointment is no longer active
+- **Single and bulk SMS sending**, with live message preview and character/SMS-unit counting
+- **Reports and analytics**, including exportable PDF and Excel reports
+- **Real SMS delivery** via the Arkesel SMS gateway, integrated with Ghanaian mobile networks (MTN, Telecel, AirtelTigo)
+
+## Tech Stack
+
+- **Framework:** Next.js 14 (App Router), TypeScript
+- **Database:** PostgreSQL, hosted on Supabase
+- **ORM:** Prisma
+- **Styling:** Tailwind CSS
+- **Authentication:** bcrypt (password hashing) + JOSE (JWT sessions)
+- **SMS Gateway:** Arkesel
+- **Hosting:** Vercel, with Vercel Cron for automated reminder dispatch
+- **File parsing:** Papaparse (CSV), xlsx (Excel)
+- **Export:** jsPDF, xlsx
 
 ## Getting Started
 
-First, run the development server:
+First, install dependencies:
+
+```bash
+npm install
+```
+
+Set up your environment variables in a `.env` file:
+
+
+Then run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the app.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deployment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This project is deployed on [Vercel](https://vercel.com), with automatic deployment on every push to the main branch. A scheduled cron job (configured in `vercel.json`) runs daily to dispatch any due SMS reminders automatically.
 
-## Learn More
+## Project Context
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This system was developed as a final-year BTech project, addressing the problem of missed patient appointments at Ghanaian health facilities through automated, locally-adapted SMS communication.
