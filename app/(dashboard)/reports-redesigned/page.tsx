@@ -71,7 +71,7 @@ export default function ReportsPage() {
         const sent = data.sent || 0;
         const delivered = data.delivered || 0;
         const failed = data.failed || 0;
-        const pendingMessages = data.pendingMessages ?? data.pending ?? 0;
+        const pendingMessages = data.pendingMessages ?? 0;
 
         const rate = totalSms > 0 ? Math.round((delivered / totalSms) * 100) : 0;
 
