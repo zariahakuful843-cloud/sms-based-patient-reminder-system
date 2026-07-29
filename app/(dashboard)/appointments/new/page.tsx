@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 
 type Patient = { id: number; fullName: string; phoneNumber: string };
+type Doctor = { id: number; name: string };
 
 export default function NewAppointmentPage() {
   const router = useRouter();
@@ -15,11 +16,13 @@ export default function NewAppointmentPage() {
   const prefillPatientId = searchParams.get("patientId");
 
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({
     patientId: prefillPatientId ?? "",
-    doctorName: "",
+    doctorId: "",
     appointmentDate: "",
     appointmentTime: "",
     notes: "",
@@ -29,6 +32,9 @@ export default function NewAppointmentPage() {
     fetch("/api/patients?limit=200")
       .then((r) => r.json())
       .then((d) => setPatients(d.patients ?? []));
+    fetch("/api/users?role=DOCTOR&limit=100")
+      .then((r) => r.json())
+      .then((d) => setDoctors(d.users ?? []));
   }, []);
 
   function set(field: string, value: string) {
@@ -50,12 +56,15 @@ export default function NewAppointmentPage() {
       return;
     }
 
+    const selectedDoctor = doctors.find((d) => String(d.id) === form.doctorId);
+
     const res = await fetch("/api/appointments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         patientId: parseInt(form.patientId),
-        doctorName: form.doctorName,
+        doctorId: form.doctorId || null,
+        doctorName: selectedDoctor?.name ?? "",
         appointmentDate,
         notes: form.notes || null,
       }),
@@ -100,13 +109,16 @@ export default function NewAppointmentPage() {
             options={patientOptions}
           />
 
-          <Input
-            id="doctorName"
+          <Select
+            id="doctorId"
             label="Doctor / Clinician"
             required
-            placeholder="e.g. Dr. Mensah"
-            value={form.doctorName}
-            onChange={(e) => set("doctorName", e.target.value)}
+            value={form.doctorId}
+            onChange={(e) => set("doctorId", e.target.value)}
+            options={[
+              { value: "", label: "Select a doctor…" },
+              ...doctors.map((d) => ({ value: String(d.id), label: d.name })),
+            ]}
           />
 
           <div className="grid gap-4 sm:grid-cols-2">
