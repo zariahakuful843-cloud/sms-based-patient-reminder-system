@@ -4,8 +4,9 @@ import { requireAuth } from "@/lib/auth";
 import { buildReminderMessageByType } from "@/lib/sms";
 
 export async function GET(req: NextRequest) {
+  let session;
   try {
-    await requireAuth(["ADMIN", "RECEPTIONIST", "NURSE", "DOCTOR"]);
+    session = await requireAuth(["ADMIN", "RECEPTIONIST", "NURSE", "DOCTOR"]);
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -43,6 +44,10 @@ export async function GET(req: NextRequest) {
       { doctorName: { contains: search } },
     ];
   }
+  // Doctors only see appointments assigned to their own account.
+  if (session.role === "DOCTOR") {
+    where.doctorId = session.userId;
+  }
   if (date) {
     const d = new Date(date);
     const next = new Date(d);
@@ -56,7 +61,10 @@ export async function GET(req: NextRequest) {
       skip,
       take: limit,
       orderBy: { appointmentDate: "asc" },
-      include: { patient: { select: { id: true, fullName: true, phoneNumber: true } } },
+      include: {
+        patient: { select: { id: true, fullName: true, phoneNumber: true } },
+        doctor: { select: { id: true, name: true } },
+      },
     }),
     prisma.appointment.count({ where }),
   ]);
@@ -66,14 +74,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAuth(["ADMIN", "RECEPTIONIST"]);
-  } catch {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
   try {
     const body = await req.json();
-    const { patientId, doctorName, appointmentDate, notes } = body;
+    const { patientId, doctorName, doctorId, appointmentDate, notes } = body;
 
     if (!patientId || !doctorName || !appointmentDate) {
       return NextResponse.json({ error: "patientId, doctorName, and appointmentDate are required." }, { status: 400 });
@@ -83,6 +86,7 @@ export async function POST(req: NextRequest) {
       data: {
         patientId: parseInt(patientId),
         doctorName: doctorName.trim(),
+        doctorId: doctorId ? parseInt(doctorId) : null,
         appointmentDate: new Date(appointmentDate),
         notes: notes?.trim() ?? null,
         status: "SCHEDULED",
