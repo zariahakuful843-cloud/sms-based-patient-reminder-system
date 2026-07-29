@@ -11,15 +11,17 @@ datasource db {
 
 
 model User {
-  id        Int      @id @default(autoincrement())
-  username  String   @unique
-  email     String   @unique
-  password  String
-  role      String   @default("RECEPTIONIST")
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           Int           @id @default(autoincrement())
+  username     String        @unique
+  email        String        @unique
+  password     String
+  role         String        @default("RECEPTIONIST")
+  name         String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  appointments Appointment[]
 }
+  
 
 model Patient {
   id           Int           @id @default(autoincrement())
@@ -39,6 +41,7 @@ model Appointment {
   id              Int      @id @default(autoincrement())
   patientId       Int
   doctorName      String
+  doctorId        Int?
   appointmentDate DateTime
   notes           String?
   status          String   @default("SCHEDULED")
@@ -46,20 +49,9 @@ model Appointment {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor          User?    @relation(fields: [doctorId], references: [id], onDelete: SetNull)
   scheduledReminders ScheduledReminder[]
 }
-model SMSLog {
-  id             Int      @id @default(autoincrement())
-  patientId      Int
-  patientName    String
-  phoneNumber    String
-  reminderType   String
-  message        String
-  status         String   @default("PENDING")
-  sentAt         DateTime @default(now())
-  patient        Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-}
-
 model ScheduledReminder {
   id            Int          @id @default(autoincrement())
   patientId     Int
