@@ -52,6 +52,19 @@ model Appointment {
   doctor          User?    @relation(fields: [doctorId], references: [id], onDelete: SetNull)
   scheduledReminders ScheduledReminder[]
 }
+
+model SMSLog {
+  id             Int      @id @default(autoincrement())
+  patientId      Int
+  patientName    String
+  phoneNumber    String
+  reminderType   String
+  message        String
+  status         String   @default("PENDING")
+  sentAt         DateTime @default(now())
+  patient        Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+}
+
 model ScheduledReminder {
   id            Int          @id @default(autoincrement())
   patientId     Int
