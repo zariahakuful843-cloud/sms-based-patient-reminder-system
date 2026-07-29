@@ -16,7 +16,6 @@ export default function NewAppointmentPage() {
   const prefillPatientId = searchParams.get("patientId");
 
   const [patients, setPatients] = useState<Patient[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
