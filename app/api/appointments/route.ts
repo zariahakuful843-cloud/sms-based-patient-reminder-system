@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  try {
+
   try {
     const body = await req.json();
     const { patientId, doctorName, doctorId, appointmentDate, notes } = body;
