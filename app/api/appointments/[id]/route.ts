@@ -3,8 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  let session;
   try {
-    await requireAuth();
+    session = await requireAuth();
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -14,28 +15,29 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     include: { patient: true },
   });
   if (!appt) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // Doctors can only view their own appointments.
+  if (session.role === "DOCTOR" && appt.doctorId !== session.userId) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   return NextResponse.json(appt);
 }
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  // RBAC + field-level authorization (Phase 2.2 authorization only)
-  try {
-    await requireAuth(["ADMIN", "RECEPTIONIST", "NURSE", "DOCTOR"]);
-  } catch {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const { id } = await params;
+const { id } = await params;
   const body = await req.json();
   const { doctorName, appointmentDate, notes, status, reminderSent } = body;
 
-  // Decide allowed fields by role
-  // - ADMIN: all fields
-  // - RECEPTIONIST: all except notes (consultation notes)
-  // - NURSE: ONLY status
-  // - DOCTOR: ONLY notes
   const session = await requireAuth();
   const role = session.role;
+
+  // Doctors can only edit their own appointments.
+  if (role === "DOCTOR") {
+    const existing = await prisma.appointment.findUnique({ where: { id: parseInt(id) }, select: { doctorId: true } });
+    if (!existing || existing.doctorId !== session.userId) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+  }
 
   // Reject attempts to modify fields outside the role contract.
   const allowedData: Record<string, unknown> = {};
