@@ -3,12 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  let session;
   try {
-    await requireAuth(["ADMIN", "RECEPTIONIST", "NURSE", "DOCTOR"]);
+    session = await requireAuth(["ADMIN", "RECEPTIONIST", "NURSE", "DOCTOR"]);
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
 
   const { id } = await params;
   const patient = await prisma.patient.findUnique({
@@ -19,12 +19,21 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     },
   });
   if (!patient) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // Doctors can only view patients they've actually treated.
+  if (session.role === "DOCTOR") {
+    const hasAccess = patient.appointments.some((a: any) => a.doctorId === session.userId);
+    if (!hasAccess) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+  }
+
   return NextResponse.json(patient);
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth(["ADMIN", "RECEPTIONIST"]);
+    await requireAuth("RECEPTIONIST"]);
   } catch {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
