@@ -33,7 +33,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth("RECEPTIONIST");
+    await requireAuth(["RECEPTIONIST"]);
   } catch {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
