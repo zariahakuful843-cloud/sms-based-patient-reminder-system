@@ -73,10 +73,22 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  let session;
+  try {
+    session = await requireAuth(["RECEPTIONIST", "DOCTOR"]);
+  } catch {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   try {
     const body = await req.json();
-    const { patientId, doctorName, doctorId, appointmentDate, notes } = body;
+    let { patientId, doctorName, doctorId, appointmentDate, notes } = body;
+
+    // Doctors can only ever assign themselves — ignore any doctorId/doctorName they send.
+    if (session.role === "DOCTOR") {
+      doctorId = session.userId;
+      doctorName = session.name;
+    }
 
     if (!patientId || !doctorName || !appointmentDate) {
       return NextResponse.json({ error: "patientId, doctorName, and appointmentDate are required." }, { status: 400 });
