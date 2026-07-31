@@ -100,13 +100,13 @@ export default function AppointmentsPage() {
   // NURSE: view + status editing only (no create/edit/delete)
   // DOCTOR: view + open appointment + edit consultation notes only (no status editing from list)
 
-  const canCreateAppointment = role === "ADMIN" || role === "RECEPTIONIST";
-  const canEditAppointment = role === "ADMIN" || role === "RECEPTIONIST";
+  const canCreateAppointment = role === "RECEPTIONIST" || role === "DOCTOR";
+  const canEditAppointment = role === "RECEPTIONIST" || role === "DOCTOR";
   const canDeleteAppointment = role === "ADMIN";
 
-  const canUpdateStatus = role === "ADMIN" || role === "RECEPTIONIST" || role === "NURSE";
+  const canUpdateStatus = role === "RECEPTIONIST" || role === "NURSE" || role === "DOCTOR";
   const showStatusSelect = canUpdateStatus;
-  const canToggleReminder = role === "ADMIN" || role === "RECEPTIONIST";
+  const canToggleReminder = role === "RECEPTIONIST";
 
   const showNewAppointment = canCreateAppointment;
 
@@ -124,7 +124,7 @@ export default function AppointmentsPage() {
     const isDoctor = role === "DOCTOR";
 
     const canView = Boolean(role);
-    const canEdit = (isAdmin || isReceptionist) && !isDoctor;
+    const canEdit = isReceptionist || isDoctor;
     const canDelete = isAdmin;
 
     const actions: React.ReactNode[] = [];
@@ -136,7 +136,7 @@ export default function AppointmentsPage() {
           href={`/appointments/${aId}`}
           className="rounded-md px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
         >
-          {isDoctor ? "Open" : "View"}
+          View
         </Link>
       );
     }
