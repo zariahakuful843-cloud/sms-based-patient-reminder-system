@@ -100,6 +100,7 @@ function buildPreview(params: {
 
 export default function SMSPage() {
   const [tab, setTab] = useState<"single" | "bulk" | "history" | "scheduled" | "failed">("single");
+  const [role, setRole] = useState<string | null>(null);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [logs, setLogs] = useState<SMSLog[]>([]);
   const [total, setTotal] = useState(0);
@@ -178,6 +179,16 @@ export default function SMSPage() {
       setScheduledTotal(data.total || 0);
     } catch (err) { console.error(err); } finally { setLoadingScheduled(false); }
   };
+
+   useEffect(() => {
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((r) => r.json())
+      .then((s) => {
+        const detected = (s?.role ?? "").trim().toUpperCase();
+        setRole(detected);
+        if (detected === "ADMIN") setTab("history");
+      });
+  }, []);
 
   useEffect(() => {
     async function initPageData() {
@@ -300,7 +311,9 @@ export default function SMSPage() {
       {success && <div className="p-4 bg-emerald-50 text-emerald-700 text-sm font-medium rounded-lg border border-emerald-100">{success}</div>}
       {error && <div className="p-4 bg-red-50 text-red-700 text-sm font-medium rounded-lg border border-red-100">{error}</div>}
       <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-2">
-        {(["single", "bulk", "history", "scheduled", "failed"] as const).map((t) => (
+        {(["single", "bulk", "history", "scheduled", "failed"] as const)
+          .filter((t) => !(role === "ADMIN" && (t === "single" || t === "bulk")))
+          .map((t) => (
           <button key={t} type="button" onClick={() => setTab(t)} className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 ${tab === t ? "border-blue-600 text-blue-600" : "border-transparent text-slate-400 hover:text-slate-800"}`}>
             {t === "single" && "👤 Single SMS"}{t === "bulk" && "👥 Bulk SMS"}{t === "history" && "📋 SMS History"}{t === "scheduled" && "⏰ Scheduled SMS"}{t === "failed" && "❌ Failed SMS"}
           </button>
@@ -308,7 +321,7 @@ export default function SMSPage() {
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          {tab === "single" && (
+          {tab === "single" && role !== "ADMIN" && (
             <Card className="bg-white shadow-sm border border-gray-100 rounded-xl">
               <CardHeader className="p-5 font-bold text-gray-800 border-b border-gray-50">Configure Single Patient Reminder</CardHeader>
               <CardContent className="p-6">
@@ -369,7 +382,7 @@ export default function SMSPage() {
               </CardContent>
             </Card>
           )}
-          {tab === "bulk" && (
+          {tab === "bulk" && role !== "ADMIN" && (
             <Card className="bg-white shadow-sm border border-gray-100 rounded-xl">
               <CardHeader className="p-5 font-bold text-gray-800 border-b border-gray-50">Send to Multiple Patients</CardHeader>
               <CardContent className="p-6">
