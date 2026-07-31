@@ -3,8 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
+  let session;
   try {
-    await requireAuth();
+    session = await requireAuth();
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest) {
   const limit = parseInt(searchParams.get("limit") ?? "20");
   const skip = (page - 1) * limit;
 
-  const where = search
+  const where: Record<string, unknown> = search
     ? {
         OR: [
           { fullName: { contains: search } },
@@ -23,6 +24,11 @@ export async function GET(req: NextRequest) {
         ],
       }
     : {};
+
+  // Doctors only see patients they have an appointment with.
+  if (session.role === "DOCTOR") {
+    where.appointments = { some: { doctorId: session.userId } };
+  }
 
   const [patients, total] = await Promise.all([
     prisma.patient.findMany({
@@ -42,7 +48,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAuth(["ADMIN", "RECEPTIONIST"]);
+    await requireAuth(["RECEPTIONIST"]);
   } catch {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
