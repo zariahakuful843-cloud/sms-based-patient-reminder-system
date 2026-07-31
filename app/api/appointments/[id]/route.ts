@@ -41,12 +41,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const allowedData: Record<string, unknown> = {};
 
   if (role === "ADMIN") {
-    if (doctorName !== undefined) allowedData.doctorName = String(doctorName).trim();
-    if (appointmentDate !== undefined) allowedData.appointmentDate = new Date(appointmentDate);
-    if (notes !== undefined) allowedData.notes = notes;
-    if (status !== undefined) allowedData.status = status;
-    if (reminderSent !== undefined) allowedData.reminderSent = reminderSent;
+    // Administrator has view-only access to appointments — no editing.
+    return NextResponse.json({ error: "Forbidden: administrators have view-only access to appointments." }, { status: 403 });
   } else if (role === "RECEPTIONIST") {
+    
     // Cannot update consultation notes
     if (notes !== undefined) {
       return NextResponse.json({ error: "Forbidden: cannot update consultation notes." }, { status: 403 });
@@ -70,19 +68,17 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     }
     allowedData.status = status;
   } else if (role === "DOCTOR") {
-    // Must not modify appointment date/status/patient-related fields
-    const touchedNonNotes =
-      doctorName !== undefined ||
-      appointmentDate !== undefined ||
-      status !== undefined ||
-      reminderSent !== undefined;
-    if (touchedNonNotes) {
-      return NextResponse.json({ error: "Forbidden: doctors can only update consultation notes." }, { status: 403 });
+    // Doctors can write consultation notes and update status (e.g. marking a visit Completed),
+    // but cannot reassign the doctor or move the appointment date — that stays with Receptionist.
+    const touchedDisallowed = doctorName !== undefined || appointmentDate !== undefined || reminderSent !== undefined;
+    if (touchedDisallowed) {
+      return NextResponse.json({ error: "Forbidden: doctors can only update notes and status." }, { status: 403 });
     }
-    if (notes === undefined) {
+    if (notes === undefined && status === undefined) {
       return NextResponse.json({ error: "Invalid request." }, { status: 400 });
     }
-    allowedData.notes = notes;
+    if (notes !== undefined) allowedData.notes = notes;
+    if (status !== undefined) allowedData.status = status;
   } else {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
