@@ -24,6 +24,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   return NextResponse.json(appt);
 }
 
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
 const { id } = await params;
   const body = await req.json();
   const { doctorName, appointmentDate, notes, status, reminderSent } = body;
