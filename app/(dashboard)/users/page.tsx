@@ -35,7 +35,11 @@ export default function UsersPage() {
     setLoading(true);
     fetch("/api/users")
       .then((r) => r.json())
-      .then((d) => { setUsers(Array.isArray(d) ? d : []); setLoading(false); });
+      .then((d) => {
+        const list = Array.isArray(d) ? d : Array.isArray(d?.users) ? d.users : [];
+        setUsers(list);
+        setLoading(false);
+      });
   }
 
   useEffect(() => {
