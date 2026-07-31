@@ -27,7 +27,10 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     prisma.patient.count(),
     prisma.appointment.count({
-      where: { appointmentDate: { gte: today, lt: tomorrow } },
+      where: {
+        appointmentDate: { gte: today, lt: tomorrow },
+        ...(role === "DOCTOR" ? { doctorId: session?.userId } : {}),
+      },
     }),
     prisma.scheduledReminder.count({
       where: { status: "PENDING" },
@@ -38,9 +41,14 @@ export default async function DashboardPage() {
     prisma.appointment.findMany({
       take: 5,
       orderBy: { appointmentDate: "asc" },
-      where: { appointmentDate: { gte: new Date() }, status: "SCHEDULED" },
+      where: {
+        appointmentDate: { gte: new Date() },
+        status: "SCHEDULED",
+        ...(role === "DOCTOR" ? { doctorId: session?.userId } : {}),
+      },
       include: { patient: { select: { fullName: true, phoneNumber: true } } },
     }),
+    
     prisma.patient.findMany({
       take: 5,
       orderBy: { createdAt: "desc" },
