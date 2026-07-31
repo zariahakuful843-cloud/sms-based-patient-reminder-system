@@ -9,6 +9,7 @@ import { Input, Select, Textarea } from "@/components/ui/Input";
 
 type Patient = { id: number; fullName: string; phoneNumber: string };
 type Doctor = { id: number; name: string };
+type Session = { role?: string; userId?: number; name?: string };
 
 export default function NewAppointmentPage() {
   const router = useRouter();
@@ -17,6 +18,7 @@ export default function NewAppointmentPage() {
 
   const [patients, setPatients] = useState<Patient[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({
@@ -34,7 +36,17 @@ export default function NewAppointmentPage() {
     fetch("/api/users?role=DOCTOR&limit=100")
       .then((r) => r.json())
       .then((d) => setDoctors(d.users ?? []));
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((r) => r.json())
+      .then((s) => {
+        setSession(s);
+        if (s.role === "DOCTOR" && s.userId) {
+          setForm((f) => ({ ...f, doctorId: String(s.userId) }));
+        }
+      });
   }, []);
+
+  const isDoctor = session?.role === "DOCTOR";
 
   function set(field: string, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -108,17 +120,26 @@ export default function NewAppointmentPage() {
             options={patientOptions}
           />
 
-          <Select
-            id="doctorId"
-            label="Doctor / Clinician"
-            required
-            value={form.doctorId}
-            onChange={(e) => set("doctorId", e.target.value)}
-            options={[
-              { value: "", label: "Select a doctor…" },
-              ...doctors.map((d) => ({ value: String(d.id), label: d.name })),
-            ]}
-          />
+          {isDoctor ? (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-slate-700">Doctor / Clinician</label>
+              <div className="h-9 flex items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600">
+                {session?.name} (you)
+              </div>
+            </div>
+          ) : (
+            <Select
+              id="doctorId"
+              label="Doctor / Clinician"
+              required
+              value={form.doctorId}
+              onChange={(e) => set("doctorId", e.target.value)}
+              options={[
+                { value: "", label: "Select a doctor…" },
+                ...doctors.map((d) => ({ value: String(d.id), label: d.name })),
+              ]}
+            />
+          )}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
