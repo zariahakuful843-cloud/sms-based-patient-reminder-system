@@ -110,9 +110,9 @@ export default function PatientDetailPage() {
   if (loading) return <div className="py-20 text-center text-sm text-slate-400">Loading…</div>;
   if (!patient) return <div className="py-20 text-center text-sm text-slate-400">Patient not found.</div>;
 
-  const canEditPatient = role === "ADMIN" || role === "RECEPTIONIST";
+  const canEditPatient = role === "RECEPTIONIST";
   const canDeletePatient = role === "ADMIN";
-  const canScheduleAppointment = role === "ADMIN";
+  const canScheduleAppointment = role === "RECEPTIONIST" || role === "DOCTOR";
   const showSmsHistory = false;
 
   return (
