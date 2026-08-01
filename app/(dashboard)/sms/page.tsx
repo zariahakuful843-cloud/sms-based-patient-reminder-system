@@ -314,6 +314,7 @@ export default function SMSPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
+        </div>
           <div className="rounded-xl border p-5 bg-white shadow-sm flex justify-between items-center">
           <div><p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Failed</p><p className="text-2xl font-bold text-gray-800 mt-1">{stats.failed}</p></div>
           <div className="text-rose-500 bg-rose-50 p-2.5 rounded-lg">
