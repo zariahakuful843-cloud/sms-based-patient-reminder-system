@@ -288,7 +288,10 @@ export default function SMSPage() {
 
 
   return (
-    <div className="rounded-xl border p-5 bg-white shadow-sm flex justify-between items-center">
+    <div className="space-y-6 p-4 sm:p-6 bg-slate-50/50 min-h-screen">
+      <PageHeader title="SMS & Notifications Gateway" description="Manage templates, broadcasting lines, and background alerts." />
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="rounded-xl border p-5 bg-white shadow-sm flex justify-between items-center">
           <div><p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total SMS</p><p className="text-2xl font-bold text-gray-800 mt-1">{stats.total}</p></div>
           <div className="text-blue-500 bg-blue-50 p-2.5 rounded-lg">
             <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -311,8 +314,7 @@ export default function SMSPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-        </div>
-        <div className="rounded-xl border p-5 bg-white shadow-sm flex justify-between items-center">
+          <div className="rounded-xl border p-5 bg-white shadow-sm flex justify-between items-center">
           <div><p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Failed</p><p className="text-2xl font-bold text-gray-800 mt-1">{stats.failed}</p></div>
           <div className="text-rose-500 bg-rose-50 p-2.5 rounded-lg">
             <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -320,7 +322,9 @@ export default function SMSPage() {
             </svg>
           </div>
         </div>
+      </div>
       {success && <div className="p-4 bg-emerald-50 text-emerald-700 text-sm font-medium rounded-lg border border-emerald-100">{success}</div>}
+     
       {error && <div className="p-4 bg-red-50 text-red-700 text-sm font-medium rounded-lg border border-red-100">{error}</div>}
       <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-2">
         {(["single", "bulk", "history", "scheduled", "failed"] as const)
