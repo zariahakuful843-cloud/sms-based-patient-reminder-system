@@ -74,10 +74,10 @@ export default function AppointmentEditPage() {
       });
   }, [id]);
 
-  const canUpdateAppointment = role === "ADMIN" || role === "RECEPTIONIST";
+  const canUpdateAppointment = role === "RECEPTIONIST";
   const canDeleteAppointment = role === "ADMIN";
-  const canUpdateStatus = role === "ADMIN" || role === "RECEPTIONIST" || role === "NURSE";
-  const canEditConsultationNotes = role === "ADMIN" || role === "DOCTOR";
+  const canUpdateStatus = role === "RECEPTIONIST" || role === "NURSE" || role === "DOCTOR";
+  const canEditConsultationNotes = role === "DOCTOR";
   const canSave = Boolean(canUpdateAppointment || canUpdateStatus || canEditConsultationNotes);
 
   async function handleSave(e: React.FormEvent) {
