@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   let session;
   try {
-    session = await requireAuth(["RECEPTIONIST", "DOCTOR"]);
+    session = await requireAuth(["DOCTOR"]);
   } catch {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
