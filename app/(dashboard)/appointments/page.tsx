@@ -100,8 +100,8 @@ export default function AppointmentsPage() {
   // NURSE: view + status editing only (no create/edit/delete)
   // DOCTOR: view + open appointment + edit consultation notes only (no status editing from list)
 
-  const canCreateAppointment = role === "RECEPTIONIST" || role === "DOCTOR";
-  const canEditAppointment = role === "RECEPTIONIST" || role === "DOCTOR";
+  const canCreateAppointment = role === "DOCTOR";
+  const canEditAppointment = role === "DOCTOR";
   const canDeleteAppointment = role === "ADMIN";
 
   const canUpdateStatus = role === "RECEPTIONIST" || role === "NURSE" || role === "DOCTOR";
@@ -124,7 +124,7 @@ export default function AppointmentsPage() {
     const isDoctor = role === "DOCTOR";
 
     const canView = Boolean(role);
-    const canEdit = isReceptionist || isDoctor;
+    const canEdit =  isDoctor;
     const canDelete = isAdmin;
 
     const actions: React.ReactNode[] = [];
