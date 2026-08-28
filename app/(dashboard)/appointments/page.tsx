@@ -92,6 +92,56 @@ export default function AppointmentsPage() {
     fetchAppointments();
   }
 
+  async function sendAppointmentSMS(appointment: Appointment) {
+  if (!confirm(`Send an appointment reminder to ${appointment.patient.fullName}?`)) {
+    return;
+  }
+
+  try {
+    const appointmentDate = new Date(appointment.appointmentDate);
+
+    const formattedDate = appointmentDate.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+
+    const formattedTime = appointmentDate.toLocaleTimeString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    const message =
+      `Dear ${appointment.patient.fullName}, this is a reminder that you have an appointment with ` +
+      `${formatDoctorName(appointment.doctorName)} on ${formattedDate} at ${formattedTime}. ` +
+      `Please arrive 15 minutes early.`;
+
+    const response = await fetch("/api/sms/send", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        mode: "single",
+        patientId: appointment.patient.id,
+        message,
+        reminderType: "APPOINTMENT_REMINDER",
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || "Failed to send SMS.");
+    }
+
+    alert("SMS sent successfully.");
+    fetchAppointments();
+  } catch (error) {
+    alert(error instanceof Error ? error.message : "Failed to send SMS.");
+  }
+}
+
   const totalPages = Math.ceil(total / limit);
 
   // Workflow rules:
