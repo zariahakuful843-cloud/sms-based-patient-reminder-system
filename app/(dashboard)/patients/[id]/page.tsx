@@ -16,6 +16,11 @@ import {
 
 type Role = "ADMIN" | "RECEPTIONIST" | "NURSE" | "DOCTOR";
 
+type Doctor = {
+  id: number;
+  name: string;
+};
+
 type Appointment = {
   id: number;
   doctorName: string;
@@ -57,6 +62,10 @@ export default function PatientDetailPage() {
   const router = useRouter();
 
   const [patient, setPatient] = useState<Patient | null>(null);
+
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [loadingDoctors, setLoadingDoctors] = useState(false);
+
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -68,42 +77,53 @@ export default function PatientDetailPage() {
     phoneNumber: "",
     address: "",
     dateOfBirth: "",
+    doctorId: "",
   });
 
+  /*
+   * Get the logged-in user's role.
+   */
   useEffect(() => {
     (async () => {
-      const res = await fetch("/api/auth/me", {
-        credentials: "include",
-      });
+      try {
+        const res = await fetch("/api/auth/me", {
+          credentials: "include",
+        });
 
-      if (!res.ok) {
-        setRole(null);
-        return;
-      }
+        if (!res.ok) {
+          setRole(null);
+          return;
+        }
 
-      const session = (await res.json()) as {
-        role?: string;
-      };
+        const session = (await res.json()) as {
+          role?: string;
+        };
 
-      const detected = (
-        session?.role ?? "ANONYMOUS"
-      )
-        .trim()
-        .toUpperCase();
+        const detected = (
+          session?.role ?? "ANONYMOUS"
+        )
+          .trim()
+          .toUpperCase();
 
-      if (
-        detected === "ADMIN" ||
-        detected === "RECEPTIONIST" ||
-        detected === "NURSE" ||
-        detected === "DOCTOR"
-      ) {
-        setRole(detected as Role);
-      } else {
+        if (
+          detected === "ADMIN" ||
+          detected === "RECEPTIONIST" ||
+          detected === "NURSE" ||
+          detected === "DOCTOR"
+        ) {
+          setRole(detected as Role);
+        } else {
+          setRole(null);
+        }
+      } catch {
         setRole(null);
       }
     })();
   }, []);
 
+  /*
+   * Load the patient.
+   */
   useEffect(() => {
     if (!id) return;
 
@@ -129,6 +149,9 @@ export default function PatientDetailPage() {
           address: data.address ?? "",
           dateOfBirth:
             data.dateOfBirth?.split("T")[0] ?? "",
+          doctorId: data.doctor?.id
+            ? String(data.doctor.id)
+            : "",
         });
 
         setLoading(false);
@@ -139,6 +162,47 @@ export default function PatientDetailPage() {
         setLoading(false);
       });
   }, [id]);
+
+  /*
+   * Load doctors when the receptionist opens Edit.
+   */
+  useEffect(() => {
+    if (!editing || role !== "RECEPTIONIST") {
+      return;
+    }
+
+    async function loadDoctors() {
+      setLoadingDoctors(true);
+
+      try {
+        const res = await fetch(
+          "/api/users?role=DOCTOR&limit=100"
+        );
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(
+            data.error || "Failed to load doctors."
+          );
+        }
+
+        setDoctors(data.users ?? []);
+      } catch (err) {
+        console.error(err);
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to load doctors."
+        );
+      } finally {
+        setLoadingDoctors(false);
+      }
+    }
+
+    loadDoctors();
+  }, [editing, role]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -200,7 +264,11 @@ export default function PatientDetailPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        alert(data.error ?? "Failed to delete patient.");
+
+        alert(
+          data.error ?? "Failed to delete patient."
+        );
+
         return;
       }
 
@@ -228,12 +296,12 @@ export default function PatientDetailPage() {
 
   /*
    * Receptionist:
-   * Can edit patient information.
+   * Can edit patient information and assign/reassign a doctor.
    * Cannot schedule appointments.
    *
    * Doctor:
    * Can schedule follow-up appointments.
-   * Cannot edit basic patient information here.
+   * Cannot edit patient information here.
    *
    * Admin:
    * Can delete patients.
@@ -262,6 +330,19 @@ export default function PatientDetailPage() {
     return `Dr. ${withoutPrefix}`.trim();
   }
 
+  const doctorOptions = [
+    {
+      value: "",
+      label: loadingDoctors
+        ? "Loading doctors..."
+        : "Select a doctor...",
+    },
+    ...doctors.map((doctor) => ({
+      value: String(doctor.id),
+      label: formatDoctorName(doctor.name),
+    })),
+  ];
+
   return (
     <div>
       <PageHeader
@@ -287,9 +368,10 @@ export default function PatientDetailPage() {
             {canEditPatient && (
               <Button
                 size="sm"
-                onClick={() =>
-                  setEditing(!editing)
-                }
+                onClick={() => {
+                  setError("");
+                  setEditing(!editing);
+                }}
               >
                 {editing
                   ? "Cancel Edit"
@@ -380,8 +462,7 @@ export default function PatientDetailPage() {
                   onChange={(e) =>
                     setForm({
                       ...form,
-                      phoneNumber:
-                        e.target.value,
+                      phoneNumber: e.target.value,
                     })
                   }
                 />
@@ -394,8 +475,7 @@ export default function PatientDetailPage() {
                   onChange={(e) =>
                     setForm({
                       ...form,
-                      dateOfBirth:
-                        e.target.value,
+                      dateOfBirth: e.target.value,
                     })
                   }
                 />
@@ -413,6 +493,31 @@ export default function PatientDetailPage() {
                   }
                 />
 
+                {/* Assign doctor */}
+                <Select
+                  id="doctorId"
+                  label="Assigned Doctor"
+                  value={form.doctorId}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      doctorId: e.target.value,
+                    })
+                  }
+                  options={doctorOptions}
+                  disabled={
+                    loadingDoctors ||
+                    doctors.length === 0
+                  }
+                />
+
+                {doctors.length === 0 &&
+                  !loadingDoctors && (
+                    <p className="text-xs text-red-600">
+                      No doctors are currently available.
+                    </p>
+                  )}
+
                 {error && (
                   <p className="text-xs text-red-600">
                     {error}
@@ -423,6 +528,10 @@ export default function PatientDetailPage() {
                   type="submit"
                   size="sm"
                   loading={saving}
+                  disabled={
+                    loadingDoctors ||
+                    doctors.length === 0
+                  }
                 >
                   Save Changes
                 </Button>
