@@ -175,7 +175,7 @@ export default function AppointmentsPage() {
   const canView = Boolean(role);
   const canEdit = isDoctor;
   const canDelete = isAdmin;
-  const canSendSMS = isReceptionist;
+  const canSendSMS = isReceptionist && a.status === "SCHEDULED";
 
   const actions: React.ReactNode[] = [];
 
