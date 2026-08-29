@@ -167,68 +167,79 @@ export default function AppointmentsPage() {
   }
 
 
-  function appointmentActions(aId: number) {
-    const isAdmin = role === "ADMIN";
-    const isReceptionist = role === "RECEPTIONIST";
-    const isNurse = role === "NURSE";
-    const isDoctor = role === "DOCTOR";
+  function appointmentActions(a: Appointment) {
+  const isAdmin = role === "ADMIN";
+  const isReceptionist = role === "RECEPTIONIST";
+  const isDoctor = role === "DOCTOR";
 
-    const canView = Boolean(role);
-    const canEdit =  isDoctor;
-    const canDelete = isAdmin;
+  const canView = Boolean(role);
+  const canEdit = isDoctor;
+  const canDelete = isAdmin;
+  const canSendSMS = isReceptionist;
 
-    const actions: React.ReactNode[] = [];
+  const actions: React.ReactNode[] = [];
 
-    if (canView) {
-      actions.push(
-        <Link
-          key="view"
-          href={`/appointments/${aId}`}
-          className="rounded-md px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
-        >
-          View
-        </Link>
-      );
-    }
-
-    if (canEdit) {
-      actions.push(
-        <Link
-          key="edit"
-          href={`/appointments/${aId}/edit`}
-          className="rounded-md px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
-        >
-          Edit
-        </Link>
-      );
-    }
-
-    if (canDelete) {
-      actions.push(
-        <button
-          key="delete"
-          onClick={() => handleDelete(aId)}
-          className="rounded-md px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
-        >
-          Delete
-        </button>
-      );
-    }
-
-    if (actions.length === 0) {
-      actions.push(
-        <span
-          key="fallback"
-          className="cursor-not-allowed rounded-md px-2.5 py-1 text-xs font-medium text-slate-400 bg-slate-50 ring-1 ring-slate-200"
-        >
-          View
-        </span>
-      );
-    }
-
-    return actions;
+  if (canView) {
+    actions.push(
+      <Link
+        key="view"
+        href={`/appointments/${a.id}`}
+        className="rounded-md px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
+      >
+        View
+      </Link>
+    );
   }
 
+  if (canSendSMS) {
+    actions.push(
+      <button
+        key="send-sms"
+        onClick={() => sendAppointmentSMS(a)}
+        className="rounded-md px-2.5 py-1 text-xs font-medium text-emerald-600 hover:bg-emerald-50"
+      >
+        Send SMS
+      </button>
+    );
+  }
+
+  if (canEdit) {
+    actions.push(
+      <Link
+        key="edit"
+        href={`/appointments/${a.id}/edit`}
+        className="rounded-md px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
+      >
+        Edit
+      </Link>
+    );
+  }
+
+  if (canDelete) {
+    actions.push(
+      <button
+        key="delete"
+        onClick={() => handleDelete(a.id)}
+        className="rounded-md px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
+      >
+        Delete
+      </button>
+    );
+  }
+
+  if (actions.length === 0) {
+    actions.push(
+      <span
+        key="fallback"
+        className="cursor-not-allowed rounded-md px-2.5 py-1 text-xs font-medium text-slate-400 bg-slate-50 ring-1 ring-slate-200"
+      >
+        View
+      </span>
+    );
+  }
+
+  return actions;
+}
   return (
     <div>
       <PageHeader
@@ -355,7 +366,7 @@ export default function AppointmentsPage() {
                   </td>
 
                   <td className="px-4 py-3">
-                    <div className="flex gap-2">{appointmentActions(a.id)}</div>
+                    <div className="flex gap-2">{appointmentActions(a)}</div>
                   </td>
                 </tr>
               ))
