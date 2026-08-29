@@ -11,30 +11,34 @@ datasource db {
 
 
 model User {
-  id           Int           @id @default(autoincrement())
-  username     String        @unique
-  email        String        @unique
-  password     String
-  role         String        @default("RECEPTIONIST")
-  name         String
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  appointments Appointment[]
+  id              Int           @id @default(autoincrement())
+  username        String        @unique
+  email           String        @unique
+  password        String
+  role            String        @default("RECEPTIONIST")
+  name            String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  appointments    Appointment[]
+  assignedPatients Patient[]    @relation("AssignedDoctor")
 }
-  
 
 model Patient {
-  id           Int           @id @default(autoincrement())
-  fullName     String
-  gender       String
-  phoneNumber  String
-  address      String
-  dateOfBirth  DateTime
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  appointments          Appointment[]
-  smsLogs               SMSLog[]
-  scheduledReminders   ScheduledReminder[]
+  id                Int                 @id @default(autoincrement())
+  fullName          String
+  gender            String
+  phoneNumber       String
+  address           String
+  dateOfBirth       DateTime
+  doctorId          Int?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  doctor            User?               @relation("AssignedDoctor", fields: [doctorId], references: [id], onDelete: SetNull)
+  appointments      Appointment[]
+  smsLogs           SMSLog[]
+  scheduledReminders ScheduledReminder[]
 }
 
 model Appointment {
