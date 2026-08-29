@@ -74,6 +74,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   let session;
+
   try {
     session = await requireAuth(["DOCTOR"]);
   } catch {
@@ -84,34 +85,106 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     let { patientId, doctorName, doctorId, appointmentDate, notes } = body;
 
-    // Doctors can only ever assign themselves — ignore any doctorId/doctorName they send.
-    if (session.role === "DOCTOR") {
-      doctorId = session.userId;
-      doctorName = session.name;
-    }
+    // Doctors can only assign appointments to themselves.
+    doctorId = session.userId;
+    doctorName = session.name;
 
-    if (!patientId || !doctorName || !appointmentDate) {
-      return NextResponse.json({ error: "patientId, doctorName, and appointmentDate are required." }, { status: 400 });
+    if (!patientId || !appointmentDate) {
+      return NextResponse.json(
+        {
+          error: "patientId and appointmentDate are required.",
+        },
+        { status: 400 }
+      );
     }
 
     const appointment = await prisma.appointment.create({
       data: {
         patientId: parseInt(patientId),
         doctorName: doctorName.trim(),
-        doctorId: doctorId ? parseInt(doctorId) : null,
+        doctorId: doctorId,
         appointmentDate: new Date(appointmentDate),
         notes: notes?.trim() ?? null,
         status: "SCHEDULED",
       },
-      include: { patient: true },
+      include: {
+        patient: true,
+      },
     });
 
-    // Auto-schedule a reminder for 1 day before the appointment, same time.
+    /*
+     * ----------------------------------------------------
+     * 1. SEND IMMEDIATE APPOINTMENT CONFIRMATION SMS
+     * ----------------------------------------------------
+     */
+
+    const confirmationMessage =
+      `Dear ${appointment.patient.fullName}, your appointment with ` +
+      `${doctorName.trim().replace(/^dr\.\s*/i, "Dr. ")} has been scheduled for ` +
+      `${new Date(appointment.appointmentDate).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      })} at ` +
+      `${new Date(appointment.appointmentDate).toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}. Please arrive 15 minutes early.`;
+
+    try {
+      const { sendSMS, formatToInternational } = await import("@/lib/sms");
+
+      const formattedPhone = formatToInternational(
+        appointment.patient.phoneNumber
+      );
+
+      const result = await sendSMS({
+        to: formattedPhone,
+        message: confirmationMessage,
+      });
+
+      const deliverySuccess = result.status !== "FAILED";
+
+      await prisma.sMSLog.create({
+        data: {
+          patientId: appointment.patientId,
+          patientName: appointment.patient.fullName,
+          phoneNumber: appointment.patient.phoneNumber,
+          reminderType: "APPOINTMENT_CONFIRMATION",
+          message: confirmationMessage,
+          status: deliverySuccess ? "SENT" : "FAILED",
+        },
+      });
+    } catch (smsError) {
+      console.error(
+        "[APPOINTMENT CONFIRMATION SMS ERROR]",
+        smsError
+      );
+
+      // Appointment remains created even if SMS fails.
+      await prisma.sMSLog.create({
+        data: {
+          patientId: appointment.patientId,
+          patientName: appointment.patient.fullName,
+          phoneNumber: appointment.patient.phoneNumber,
+          reminderType: "APPOINTMENT_CONFIRMATION",
+          message: confirmationMessage,
+          status: "FAILED",
+        },
+      });
+    }
+
+    /*
+     * ----------------------------------------------------
+     * 2. SCHEDULE AUTOMATIC REMINDER FOR ONE DAY BEFORE
+     * ----------------------------------------------------
+     */
+
     const reminderTime = new Date(appointment.appointmentDate);
     reminderTime.setDate(reminderTime.getDate() - 1);
 
     if (reminderTime > new Date()) {
-      const message = buildReminderMessageByType({
+      const reminderMessage = buildReminderMessageByType({
         reminderType: "APPOINTMENT_REMINDER",
         patientName: appointment.patient.fullName,
         appointmentDate: appointment.appointmentDate,
@@ -123,7 +196,7 @@ export async function POST(req: NextRequest) {
           patientName: appointment.patient.fullName,
           phoneNumber: appointment.patient.phoneNumber,
           reminderType: "APPOINTMENT_REMINDER",
-          message,
+          message: reminderMessage,
           status: "PENDING",
           scheduledAt: reminderTime,
           appointmentId: appointment.id,
@@ -132,7 +205,12 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(appointment, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: "Server error." }, { status: 500 });
+  } catch (error) {
+    console.error("[APPOINTMENT CREATE ERROR]", error);
+
+    return NextResponse.json(
+      { error: "Server error." },
+      { status: 500 }
+    );
   }
 }
