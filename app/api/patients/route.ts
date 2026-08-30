@@ -93,10 +93,10 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   /*
-   * Only receptionists register patients.
-   */
+ * Only Medical Records Officers register patients.
+ */
   try {
-    await requireAuth(["RECEPTIONIST"]);
+    await requireAuth(["MEDICAL_RECORDS_OFFICER"]);
   } catch {
     return NextResponse.json(
       { error: "Forbidden" },
