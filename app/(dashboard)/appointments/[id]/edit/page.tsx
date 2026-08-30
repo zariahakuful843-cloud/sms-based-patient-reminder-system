@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 
-type Role = "ADMIN" | "RECEPTIONIST" | "NURSE" | "DOCTOR";
+type Role = "ADMIN" | "MEDICAL_RECORDS_OFFICER" | "NURSE" | "DOCTOR";
 
 type Appointment = {
   id: number;
@@ -48,7 +48,7 @@ export default function AppointmentEditPage() {
       }
       const session = (await res.json()) as { role?: string };
       const detected = (session?.role ?? "ANONYMOUS").trim().toUpperCase();
-      if (detected === "ADMIN" || detected === "RECEPTIONIST" || detected === "NURSE" || detected === "DOCTOR") {
+      if (detected === "ADMIN" || detected === "MEDICAL_RECORDS_OFFICER" || detected === "NURSE" || detected === "DOCTOR") {
         setRole(detected as Role);
       } else {
         setRole(null);
@@ -74,9 +74,9 @@ export default function AppointmentEditPage() {
       });
   }, [id]);
 
-  const canUpdateAppointment = role === "RECEPTIONIST";
+  const canUpdateAppointment = role === "MEDICAL_RECORDS_OFFICER";
   const canDeleteAppointment = role === "ADMIN";
-  const canUpdateStatus = role === "RECEPTIONIST" || role === "NURSE" || role === "DOCTOR";
+  const canUpdateStatus = role === "MEDICAL_RECORDS_OFFICER" || role === "NURSE" || role === "DOCTOR";
   const canEditConsultationNotes = role === "DOCTOR";
   const canSave = Boolean(canUpdateAppointment || canUpdateStatus || canEditConsultationNotes);
 
@@ -163,7 +163,7 @@ if (canEditConsultationNotes) {
             <Input
               id="doctorName"
               label="Doctor / Clinician"
-              required={role === "ADMIN" || role === "RECEPTIONIST"}
+              required={role === "ADMIN" || role === "MEDICAL_RECORDS_OFFICER"}
               value={form.doctorName}
               onChange={(e) => setForm({ ...form, doctorName: e.target.value })}
               disabled={!canUpdateAppointment}
