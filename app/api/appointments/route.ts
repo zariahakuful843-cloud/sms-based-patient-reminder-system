@@ -6,7 +6,7 @@ import { buildReminderMessageByType } from "@/lib/sms";
 export async function GET(req: NextRequest) {
   let session;
   try {
-    session = await requireAuth(["ADMIN", "RECEPTIONIST", "NURSE", "DOCTOR"]);
+    session = await requireAuth(["ADMIN", "MEDICAL_RECORDS_OFFICER", "NURSE", "DOCTOR"]);
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
