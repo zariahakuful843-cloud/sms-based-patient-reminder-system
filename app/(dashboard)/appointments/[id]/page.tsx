@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { formatDateTime } from "@/lib/utils";
 
-type Role = "ADMIN" | "RECEPTIONIST" | "NURSE" | "DOCTOR";
+type Role = "ADMIN" | "MEDICAL_RECORDS_OFFICER" | "NURSE" | "DOCTOR";
 
 type Appointment = {
   id: number;
@@ -36,7 +36,7 @@ export default function AppointmentDetailsPage() {
       }
       const session = (await res.json()) as { role?: string };
       const detected = (session?.role ?? "ANONYMOUS").trim().toUpperCase();
-      if (detected === "ADMIN" || detected === "RECEPTIONIST" || detected === "NURSE" || detected === "DOCTOR") {
+      if (detected === "ADMIN" || detected === "MEDICAL_RECORDS_OFFICER" || detected === "NURSE" || detected === "DOCTOR") {
         setRole(detected as Role);
       } else {
         setRole(null);
@@ -54,8 +54,8 @@ export default function AppointmentDetailsPage() {
       });
   }, [id]);
 
-  const canUpdateAppointment = role === "ADMIN" || role === "RECEPTIONIST";
-  const canUpdateStatus = role === "ADMIN" || role === "RECEPTIONIST" || role === "NURSE";
+  const canUpdateAppointment = role === "ADMIN" || role === "MEDICAL_RECORDS_OFFICER";
+  const canUpdateStatus = role === "ADMIN" || role === "MEDICAL_RECORDS_OFFICER" || role === "NURSE";
   const canEditConsultationNotes = role === "ADMIN" || role === "DOCTOR";
   const canDeleteAppointment = role === "ADMIN";
 
