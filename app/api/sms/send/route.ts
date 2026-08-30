@@ -15,7 +15,7 @@ function formatArkeselNumber(phone: string): string {
 export async function POST(req: NextRequest) {
   // 1. Verify User Authorization Rights
   try {
-    await requireAuth(["RECEPTIONIST"]);
+    await requireAuth(["MEDICAL_RECORDS_OFFICER"]);
   } catch (err) {
     console.error("[SMS SEND] forbidden", {
       route: "POST /api/sms/send",
