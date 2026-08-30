@@ -14,7 +14,7 @@ import {
   calculateAge,
 } from "@/lib/utils";
 
-type Role = "ADMIN" | "RECEPTIONIST" | "NURSE" | "DOCTOR";
+type Role = "ADMIN" | "MEDICAL_RECORDS_OFFICER" | "NURSE" | "DOCTOR";
 
 type Doctor = {
   id: number;
@@ -167,7 +167,7 @@ export default function PatientDetailPage() {
    * Load doctors when the receptionist opens Edit.
    */
   useEffect(() => {
-    if (!editing || role !== "RECEPTIONIST") {
+    if (!editing || role !== "MEDICAL_RECORDS_OFFICER") {
       return;
     }
 
@@ -295,7 +295,7 @@ export default function PatientDetailPage() {
   }
 
   /*
-   * Receptionist:
+   * MEDICAL RECORDS OFFICER:
    * Can edit patient information and assign/reassign a doctor.
    * Cannot schedule appointments.
    *
@@ -306,7 +306,7 @@ export default function PatientDetailPage() {
    * Admin:
    * Can delete patients.
    */
-  const canEditPatient = role === "RECEPTIONIST";
+  const canEditPatient = role === "MEDICAL_RECORDS_OFFICER";
   const canDeletePatient = role === "ADMIN";
   const canScheduleAppointment = role === "DOCTOR";
 
