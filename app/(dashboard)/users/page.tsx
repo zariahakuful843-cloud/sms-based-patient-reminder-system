@@ -28,7 +28,7 @@ export default function UsersPage() {
   const [myRole, setMyRole] = useState<string | null>(null);
 
   const [form, setForm] = useState({
-    name: "", username: "", email: "", password: "", role: "RECEPTIONIST",
+    name: "", username: "", email: "", password: "",  role: "MEDICAL_RECORDS_OFFICER",
   });
 
   function fetchUsers() {
@@ -73,7 +73,7 @@ export default function UsersPage() {
     if (!res.ok) { setError(data.error ?? "Failed to create user."); return; }
     setSuccess(`User "${form.username}" created.`);
     setShowForm(false);
-    setForm({ name: "", username: "", email: "", password: "", role: "RECEPTIONIST" });
+    setForm({ name: "", username: "", email: "", password: "", role: "MEDICAL_RECORDS_OFFICER" });
     fetchUsers();
   }
 
@@ -110,7 +110,7 @@ export default function UsersPage() {
               onChange={(e) => setForm({ ...form, role: e.target.value })}
               options={[
                 { value: "ADMIN", label: "Admin" },
-                { value: "RECEPTIONIST", label: "Receptionist" },
+                { value: "MEDICAL_RECORDS_OFFICER", label: "Medical Records Officer" },
                 { value: "DOCTOR", label: "Doctor" },
                 { value: "NURSE", label: "Nurse" },
               ]}
@@ -161,8 +161,8 @@ export default function UsersPage() {
                     label={
                       u.role === "ADMIN"
                         ? "Admin"
-                        : u.role === "RECEPTIONIST"
-                          ? "Receptionist"
+                      : u.role === "MEDICAL_RECORDS_OFFICER"
+                          ? "Medical Records Officer"  
                           : u.role === "DOCTOR"
                             ? "Doctor"
                             : u.role === "NURSE"
