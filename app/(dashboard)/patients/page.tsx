@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/Badge";
 import { formatDate, calculateAge } from "@/lib/utils";
 import ImportPatientsModal from "@/components/patients/ImportPatientsModal";
 
-type Role = "ADMIN" | "RECEPTIONIST" | "NURSE" | "DOCTOR";
+type Role = "ADMIN" | "MEDICAL_RECORDS_OFFICER" | "NURSE" | "DOCTOR";
 
 
 
@@ -58,7 +58,7 @@ export default function PatientsPage() {
       const session = (await res.json()) as { role?: string };
       const detected = (session?.role ?? "ANONYMOUS").trim().toUpperCase();
 
-      if (detected === "ADMIN" || detected === "RECEPTIONIST" || detected === "NURSE" || detected === "DOCTOR") {
+      if (detected === "ADMIN" || detected === "MEDICAL_RECORDS_OFFICER" || detected === "NURSE" || detected === "DOCTOR") {
         setRole(detected as Role);
       } else {
         setRole(null);
@@ -75,8 +75,8 @@ export default function PatientsPage() {
 
   const totalPages = Math.ceil(total / limit);
 
-  const canRegisterPatient = role === "RECEPTIONIST";
-  const canEditPatient = role === "RECEPTIONIST";
+  const canRegisterPatient = role === "MEDICAL_RECORDS_OFFICER";
+  const canEditPatient = role === "MEDICAL_RECORDS_OFFICER";
   const canDeletePatient = role === "ADMIN";
 
   return (
