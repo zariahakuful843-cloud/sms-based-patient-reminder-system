@@ -11,7 +11,7 @@ export async function GET(
   try {
     session = await requireAuth([
       "ADMIN",
-      "RECEPTIONIST",
+      "MEDICAL_RECORDS_OFFICER",
       "NURSE",
       "DOCTOR",
     ]);
@@ -89,7 +89,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAuth(["RECEPTIONIST"]);
+    await requireAuth(["MEDICAL_RECORDS_OFFICER"]);
   } catch {
     return NextResponse.json(
       { error: "Forbidden" },
