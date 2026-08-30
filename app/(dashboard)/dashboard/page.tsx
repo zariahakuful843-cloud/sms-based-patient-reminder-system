@@ -7,7 +7,7 @@ import { formatDateTime } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
+  await requireAuth(["ADMIN", "MEDICAL_RECORDS_OFFICER", "DOCTOR", "NURSE"]);
 
   const session = await getSession();
   const role = (session?.role ?? "").trim().toUpperCase();
@@ -56,7 +56,7 @@ export default async function DashboardPage() {
   ]);
 
   const isAdmin = role === "ADMIN";
-  const isReceptionist = role === "RECEPTIONIST";
+  const isMedicalRecordsOfficer = role === "MEDICAL_RECORDS_OFFICER";
   const isNurse = role === "NURSE";
   const isDoctor = role === "DOCTOR";
 
@@ -69,12 +69,12 @@ export default async function DashboardPage() {
   // Cards visibility (only what exists in existing queries)
   const allowTotalPatients = isAdmin;
   const allowAppointmentsToday = true;
-  const allowPendingSms = isReceptionist || isNurse;
+  const allowPendingSms = isMedicalRecordsOfficer || isNurse;
   const allowSmsSentToday = isAdmin;
 
   // Sections/cards per role matrix
-  const showRecentPatients = isAdmin || isReceptionist;
-  const showRecentAppointments = isAdmin || isReceptionist;
+  const showRecentPatients = isAdmin || isMedicalRecordsOfficer;
+  const showRecentAppointments = isAdmin || isMedicalRecordsOfficer;
   const showTodayAppointmentsSection = isNurse || isDoctor;
   const showSmsActivitySection = isAdmin;
 
@@ -129,7 +129,7 @@ export default async function DashboardPage() {
     }
         
 
-    if (isReceptionist) {
+    if (isMedicalRecordsOfficer) {
       items.push(
         {
           label: "Register Patient",
@@ -510,8 +510,8 @@ export default async function DashboardPage() {
           </>
         )}
 
-        {/* RECEPTIONIST: Today's Appointments + Recent Patients */}
-        {isReceptionist && (
+        {/* MEDICAL_RECORDS_OFFICER: Today's Appointments + Recent Patients */}
+        {isMedicalRecordsOfficer && (
           <>
             <section className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 overflow-hidden">
               <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
