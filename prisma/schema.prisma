@@ -15,7 +15,7 @@ model User {
   username        String        @unique
   email           String        @unique
   password        String
-  role            String        @default("RECEPTIONIST")
+  role            String        @default("MEDICAL_RECORDS_OFFICER")
   name            String
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
