@@ -46,7 +46,7 @@ const { id } = await params;
   if (role === "ADMIN") {
     // Administrator has view-only access to appointments — no editing.
     return NextResponse.json({ error: "Forbidden: administrators have view-only access to appointments." }, { status: 403 });
-  } else if (role === "RECEPTIONIST") {
+  } else if (role === "MEDICAL_RECORDS_OFFICER") {
     
     // Cannot update consultation notes
     if (notes !== undefined) {
@@ -110,7 +110,7 @@ const { id } = await params;
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth(["ADMIN", "RECEPTIONIST"]);
+    await requireAuth(["ADMIN", "MEDICAL_RECORDS_OFFICER"]);
   } catch {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
