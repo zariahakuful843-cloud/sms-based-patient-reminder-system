@@ -182,7 +182,8 @@ export async function POST(req: NextRequest) {
 
     const reminderTime = new Date(appointment.appointmentDate);
     reminderTime.setDate(reminderTime.getDate() - 1);
-
+    reminderTime.setHours(8, 0, 0, 0); // fixed at 8:00 AM local, before the 9 AM cron run
+    
     if (reminderTime > new Date()) {
       const reminderMessage = buildReminderMessageByType({
         reminderType: "APPOINTMENT_REMINDER",
