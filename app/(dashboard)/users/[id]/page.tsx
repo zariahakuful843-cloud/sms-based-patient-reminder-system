@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { formatDate } from "@/lib/utils";
 
-type Role = "ADMIN" | "RECEPTIONIST" | "DOCTOR" | "NURSE";
+type Role = "ADMIN" | "MEDICAL_RECORDS_OFFICER" | "DOCTOR" | "NURSE";
 
 type User = {
   id: number;
@@ -69,8 +69,8 @@ export default function UserViewPage() {
   const roleLabel =
     user.role === "ADMIN"
       ? "Admin"
-      : user.role === "RECEPTIONIST"
-        ? "Receptionist"
+      : user.role === "MEDICAL_RECORDS_OFFICER"
+        ? "Medical Records Officer"
         : user.role === "DOCTOR"
           ? "Doctor"
           : user.role === "NURSE"
