@@ -107,7 +107,7 @@ export default function PatientDetailPage() {
 
         if (
           detected === "ADMIN" ||
-          detected === "RECEPTIONIST" ||
+          detected === "MEDICAL_RECORDS_OFFICER" ||
           detected === "NURSE" ||
           detected === "DOCTOR"
         ) {
