@@ -7,7 +7,7 @@ export async function POST(_req: NextRequest) {
   console.log("[SMS ENDPOINT] endpoint called:", "POST /api/sms/scheduled/send-due");
 
   try {
-    const session = await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
+    const session = await requireAuth(["ADMIN", "MEDICAL_RECORDS_OFFICER", "DOCTOR", "NURSE"]);
     console.log("[SMS SEND DUE] current user:", {
       userId: session.userId,
       username: session.username,
