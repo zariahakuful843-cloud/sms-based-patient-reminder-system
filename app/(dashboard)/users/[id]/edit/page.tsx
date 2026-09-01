@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Input, Select } from "@/components/ui/Input";
 import { formatDate } from "@/lib/utils";
 
-type Role = "ADMIN" | "RECEPTIONIST" | "DOCTOR" | "NURSE";
+type Role = "ADMIN" | "MEDICAL_RECORDS_OFFICER" | "DOCTOR" | "NURSE";
 
 type User = {
   id: number;
@@ -38,7 +38,7 @@ export default function UserEditPage() {
     username: "",
     email: "",
     password: "",
-    role: "RECEPTIONIST" as Role,
+    role: "MEDICAL_RECORDS_OFFICER" as Role,
   });
 
   useEffect(() => {
@@ -49,7 +49,7 @@ export default function UserEditPage() {
       const detected = (session?.role ?? "").trim().toUpperCase();
       if (
         detected === "ADMIN" ||
-        detected === "RECEPTIONIST" ||
+        detected === "MEDICAL_RECORDS_OFFICER" ||
         detected === "DOCTOR" ||
         detected === "NURSE"
       ) {
@@ -78,9 +78,9 @@ export default function UserEditPage() {
           email: data.email ?? "",
           password: "",
           role:
-            (data.role === "ADMIN" || data.role === "RECEPTIONIST" || data.role === "DOCTOR" || data.role === "NURSE"
+            (data.role === "ADMIN" || data.role === "MEDICAL_RECORDS_OFFICER" || data.role === "DOCTOR" || data.role === "NURSE"
               ? (data.role as Role)
-              : "RECEPTIONIST") ?? "RECEPTIONIST",
+              : "MEDICAL_RECORDS_OFFICER") ?? "MEDICAL_RECORDS_OFFICER",
         });
         setLoading(false);
       })
@@ -93,7 +93,7 @@ export default function UserEditPage() {
   const roleOptions = useMemo(
     () => [
       { value: "ADMIN", label: "Admin" },
-      { value: "RECEPTIONIST", label: "Receptionist" },
+      { value: "MEDICAL_RECORDS_OFFICER", label: "Medical Records Officer" },
       { value: "DOCTOR", label: "Doctor" },
       { value: "NURSE", label: "Nurse" },
     ],
