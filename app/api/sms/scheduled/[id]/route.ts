@@ -5,7 +5,7 @@ import { requireAuth } from "@/lib/auth";
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   console.log("[SMS ENDPOINT] endpoint called:", "GET /api/sms/scheduled/[id]");
   try {
-    const session = await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
+    const session = await requireAuth(["ADMIN", "MEDICAL_RECORDS_OFFICER", "DOCTOR", "NURSE"]);
     console.log("[SMS SCHEDULED ITEM] current user:", {
       userId: session.userId,
       username: session.username,
@@ -29,7 +29,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   console.log("[SMS ENDPOINT] endpoint called:", "PUT /api/sms/scheduled/[id]");
   try {
-    const session = await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
+    const session = await requireAuth(["ADMIN", "MEDICAL_RECORDS_OFFICER", "DOCTOR", "NURSE"]);
     console.log("[SMS SCHEDULED ITEM] current user:", {
       userId: session.userId,
       username: session.username,
@@ -87,7 +87,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   console.log("[SMS ENDPOINT] endpoint called:", "DELETE /api/sms/scheduled/[id]");
   try {
-    const session = await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
+    const session = await requireAuth(["ADMIN", "MEDICAL_RECORDS_OFFICER", "DOCTOR", "NURSE"]);
     console.log("[SMS SCHEDULED ITEM] current user:", {
       userId: session.userId,
       username: session.username,
