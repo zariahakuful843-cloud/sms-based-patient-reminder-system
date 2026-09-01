@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
   console.log("[SMS ENDPOINT] endpoint called:", "POST /api/sms/test");
 
   try {
-    const session = await requireAuth(["ADMIN", "RECEPTIONIST", "DOCTOR", "NURSE"]);
+    const session = await requireAuth(["ADMIN", "MEDICAL_RECORDS_OFFICER", "DOCTOR", "NURSE"]);
     console.log("[SMS TEST] current user:", {
       userId: session.userId,
       username: session.username,
